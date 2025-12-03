@@ -1,0 +1,16 @@
+{
+  "name": "phagen-crawler",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "crawl": "ts-node-esm src/index.ts"
+  },
+  "dependencies": {
+    "@crawlee/basic": "3.9.2",
+    "ts-node": "10.9.2"
+  },
+  "devDependencies": {
+    "typescript": "5.6.3"
+  }
+}

@@ -1,0 +1,51 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: ../backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ../backend:/app
+      - ../agents:/agents
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ../frontend
+    command: npm run dev
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    volumes:
+      - ../frontend:/app
+    ports:
+      - "3000:3000"
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_PASSWORD=phagen
+      - POSTGRES_USER=phagen
+      - POSTGRES_DB=phagen
+    ports:
+      - "5432:5432"
+
+  minio:
+    image: quay.io/minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=phagen123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+
+  ollama:
+    image: ollama/ollama
+    pull_policy: always
+    ports:
+      - "11434:11434"

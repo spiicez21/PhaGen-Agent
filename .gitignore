@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+.env
+.env.*
+
+# Node
+node_modules/
+yarn.lock
+pnpm-lock.yaml
+.next/
+out/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data/Indexes
+indexes/*.faiss
+indexes/*.bin
+indexes/*.chroma
+
+# devfiles
+ignore.md
