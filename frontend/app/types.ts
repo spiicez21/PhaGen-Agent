@@ -5,6 +5,7 @@ export interface WorkerEvidence {
   text: string;
   url: string;
   confidence: number;
+  evidence_id?: string;
 }
 
 export interface WorkerResultPayload {
@@ -15,11 +16,27 @@ export interface WorkerResultPayload {
   metadata: Record<string, string>;
 }
 
+export interface StoryClaimLink {
+  claim_id: string;
+  claim_text: string;
+  worker: string;
+  evidence_ids: string[];
+  status: "linked" | "missing";
+}
+
+export interface ValidationSummary {
+  status: "pass" | "needs_review";
+  claims_total: number;
+  claims_linked: number;
+  claim_links: StoryClaimLink[];
+}
+
 export interface MasterPayload {
   innovation_story: string;
   recommendation: string;
   market_score: number;
   workers: Record<string, WorkerResultPayload>;
+  validation?: ValidationSummary;
 }
 
 export type TimelineStatus = "pending" | "running" | "completed" | "failed";

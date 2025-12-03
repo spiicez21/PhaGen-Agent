@@ -4,6 +4,7 @@ import { DEMO_JOB, MARKET_METRICS, SAMPLE_PAYLOAD } from "../sample-data";
 
 export default function ResultsPage() {
   const workers = SAMPLE_PAYLOAD.workers;
+  const validation = SAMPLE_PAYLOAD.validation;
 
   return (
     <div className="section-stack">
@@ -37,6 +38,39 @@ export default function ResultsPage() {
       </section>
 
       <EvidenceTabs workers={workers} reportJobId={DEMO_JOB.id} />
+
+      {validation && (
+        <section className="section-card space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="eyebrow">Validation pass</p>
+              <h2 className="text-xl font-semibold">Claim traceability</h2>
+            </div>
+            <span className={`validation-chip validation-chip--${validation.status}`}>
+              {validation.claims_linked}/{validation.claims_total} claims linked
+            </span>
+          </div>
+          <p className="subtle-text">
+            Every sentence in the innovation story carries an evidence ID so reviewers can trace claims back to primary sources.
+          </p>
+          <div className="validation-claims">
+            {validation.claim_links.map((claim) => (
+              <article key={claim.claim_id} className="validation-claim space-y-2">
+                <header className="flex flex-wrap items-center gap-2">
+                  <span className="badge">{claim.worker}</span>
+                  <span className="confidence-pill">
+                    {claim.status === "linked" ? "Linked" : "Needs review"}
+                  </span>
+                </header>
+                <p>{claim.claim_text}</p>
+                <p className="subtle-text">
+                  Evidence IDs · {claim.evidence_ids.length ? claim.evidence_ids.join(", ") : "None"}
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

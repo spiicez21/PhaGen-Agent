@@ -30,6 +30,7 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - Master agent now uses an LLM prompt that merges worker JSON into the Innovation Story and rubric-based recommendation.
 - HTML-to-PDF export path now streams backend-generated reports with frontend download hooks.
 - Multi-molecule comparison workspace now renders side-by-side evidence plus a `/api/jobs/compare` endpoint for shared payloads.
+- Validation pass now assigns deterministic evidence IDs and links every innovation story claim to its supporting citations, surfacing the status in UI + PDF exports.
 
 ### Phase UI — Experience & admin
 - Landing hero, molecule intake, job status timeline, innovation story summary, and multi-panel evidence dashboard now reflect ~70% of the UI blueprint.
@@ -39,7 +40,6 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 
 ## 🔜 Pending
 ### Phase 4 — Aggregation & reporting
-- [ ] Validation pass linking every claim in the story to evidence IDs.
 - [ ] Fallback summarizer that emits a lite summary if the LLM path fails.
 - [ ] Report versioning so each molecule keeps V1/V2 snapshots for auditability.
 - [ ] Integrate RDKit rendering into the report generator (SVG/PNG outputs embedded into PDF & HTML).

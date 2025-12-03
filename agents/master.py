@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
 from dataclasses import asdict
-from typing import Dict
+from typing import Dict, List
 
 from .llm import LLMClient, LLMClientError, format_structured_context
 from .models import (
@@ -29,6 +30,12 @@ class MasterAgent:
         "patent": 35.0,
         "literature": 35.0,
         "market": 30.0,
+    }
+    WORKER_KEYWORDS = {
+        "clinical": ("clinical", "trial", "phase", "patient", "fvc", "registry"),
+        "literature": ("literature", "mechanism", "paper", "doi", "study"),
+        "patent": ("patent", "ip", "claim", "regulatory", "label"),
+        "market": ("market", "tam", "competition", "commercial", "access", "pricing"),
     }
     DEFAULT_RETRY_BUDGET = {
         "clinical": 1,
@@ -239,7 +246,17 @@ class MasterAgent:
         return mapping.get(normalized, fallback)
 
     def serialize(self, result: MasterResult) -> dict:
-        return asdict(result)
+        payload = asdict(result)
+        workers: Dict[str, Dict[str, object]] = payload.get("workers", {})
+        worker_evidence_map = self._attach_evidence_ids(workers)
+        claim_links = self._link_story_claims(
+            payload.get("innovation_story", ""),
+            workers,
+            worker_evidence_map,
+        )
+        payload["validation"] = self._build_validation_summary(claim_links)
+        payload["workers"] = workers
+        return payload
 
     # Execution helpers ------------------------------------------------
     def _run_with_retries(
@@ -286,3 +303,82 @@ class MasterAgent:
             ) from exc
         finally:
             executor.shutdown(wait=False, cancel_futures=True)
+
+    # Validation helpers ----------------------------------------------
+    def _attach_evidence_ids(
+        self, workers: Dict[str, Dict[str, object]]
+    ) -> Dict[str, List[str]]:
+        worker_map: Dict[str, List[str]] = {}
+        for worker_name, data in workers.items():
+            evidence_records = list(data.get("evidence", []) or [])
+            enriched: List[dict] = []
+            evidence_ids: List[str] = []
+            for idx, record in enumerate(evidence_records, start=1):
+                evidence_id = f"{worker_name}-{idx}"
+                enriched_record = dict(record)
+                enriched_record["evidence_id"] = evidence_id
+                enriched.append(enriched_record)
+                evidence_ids.append(evidence_id)
+            data["evidence"] = enriched
+            worker_map[worker_name] = evidence_ids
+        return worker_map
+
+    def _link_story_claims(
+        self,
+        story: str,
+        workers: Dict[str, Dict[str, object]],
+        worker_evidence_map: Dict[str, List[str]],
+    ) -> List[dict]:
+        sentences = [
+            sentence.strip()
+            for sentence in re.split(r"(?<=[.!?])\s+", story)
+            if sentence.strip()
+        ]
+        if not sentences:
+            sentences = [
+                str(data.get("summary", "")).strip()
+                for data in workers.values()
+                if data.get("summary")
+            ]
+        all_evidence_ids = [
+            evidence_id
+            for evidence_list in worker_evidence_map.values()
+            for evidence_id in evidence_list
+        ]
+        fallback_worker = next(
+            (worker for worker, ids in worker_evidence_map.items() if ids),
+            "clinical",
+        )
+        claim_links: List[dict] = []
+        for idx, sentence in enumerate(sentences, start=1):
+            worker = self._match_worker(sentence, fallback_worker)
+            linked_ids = worker_evidence_map.get(worker) or all_evidence_ids[:1]
+            status = "linked" if linked_ids else "missing"
+            claim_links.append(
+                {
+                    "claim_id": f"claim-{idx}",
+                    "claim_text": sentence,
+                    "worker": worker,
+                    "evidence_ids": linked_ids,
+                    "status": status,
+                }
+            )
+        return claim_links
+
+    def _match_worker(self, sentence: str, fallback_worker: str) -> str:
+        lowered = sentence.lower()
+        for worker, keywords in self.WORKER_KEYWORDS.items():
+            if any(keyword in lowered for keyword in keywords):
+                return worker
+        return fallback_worker
+
+    def _build_validation_summary(self, claim_links: List[dict]) -> dict:
+        total = len(claim_links)
+        linked = sum(1 for claim in claim_links if claim.get("status") == "linked")
+        status = "pass" if total and linked == total else "needs_review"
+        return {
+            "status": status,
+            "claims_total": total,
+            "claims_linked": linked,
+            "claim_links": claim_links,
+        }

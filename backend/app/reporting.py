@@ -82,6 +82,16 @@ _REPORT_TEMPLATE = _ENV.from_string(
       .meta-key {
         font-weight: 600;
       }
+      .validation-list {
+        margin: 16px 0 0;
+        padding-left: 18px;
+      }
+      .validation-list li {
+        margin-bottom: 10px;
+      }
+      .validation-status {
+        font-weight: 600;
+      }
       footer {
         margin-top: 40px;
         font-size: 11px;
@@ -102,6 +112,21 @@ _REPORT_TEMPLATE = _ENV.from_string(
       <p style=\"margin-top: 12px;\">Market score: {{ market_score }}</p>
       <p style=\"margin-top: 12px;\">{{ innovation_story }}</p>
     </section>
+
+    {% if validation %}
+    <section class="summary-box">
+      <p class="eyebrow">Claim traceability · {{ validation.status_label }}</p>
+      <p>{{ validation.claims_linked }} / {{ validation.claims_total }} claims linked to evidence.</p>
+      <ol class="validation-list">
+        {% for claim in validation.claims %}
+        <li>
+          <span class="validation-status">{{ claim.claim_text }}</span><br />
+          Evidence: {{ claim.evidence_label }}
+        </li>
+        {% endfor %}
+      </ol>
+    </section>
+    {% endif %}
 
     {% for worker in worker_sections %}
     <section class=\"worker-section\">
@@ -171,13 +196,35 @@ def _format_evidence(evidence: List[Dict[str, Any]]) -> List[Dict[str, str]]:
     entries: List[Dict[str, str]] = []
     for record in (evidence or [])[:5]:
         entries.append(
-            {
-                "type": record.get("type", "Evidence"),
-                "text": _truncate(record.get("text", "")),
-                "url": record.get("url", ""),
-            }
+          {
+            "type": record.get("type", "Evidence"),
+            "text": _truncate(record.get("text", "")),
+            "url": record.get("url", ""),
+            "evidence_id": record.get("evidence_id", ""),
+          }
         )
     return entries
+
+
+    def _format_claim_links(validation: Dict[str, Any]) -> Dict[str, Any] | None:
+      if not validation:
+        return None
+      claims = []
+      for claim in validation.get("claim_links", []):
+        evidence_ids = claim.get("evidence_ids") or []
+        label = ", ".join(evidence_ids) if evidence_ids else "Not linked"
+        claims.append(
+          {
+            "claim_text": _truncate(claim.get("claim_text", ""), 320),
+            "evidence_label": label,
+          }
+        )
+      return {
+        "status_label": (validation.get("status") or "Needs review").replace("_", " ").title(),
+        "claims_total": validation.get("claims_total", 0),
+        "claims_linked": validation.get("claims_linked", 0),
+        "claims": claims,
+      }
 
 
 def _build_context(job: JobResponse) -> Dict[str, object]:
@@ -189,16 +236,16 @@ def _build_context(job: JobResponse) -> Dict[str, object]:
         metadata = data.get("metadata") or {}
         evidence = data.get("evidence") or []
         workers.append(
-            {
-                "name": name.title(),
-                "summary": data.get("summary", ""),
-                "confidence_band": _BAND_LABELS.get(
-                    (data.get("confidence_band") or "low").lower(),
-                    "Confidence",
-                ),
-                "metadata": _format_metadata(metadata),
-                "evidence": _format_evidence(evidence),
-            }
+          {
+            "name": name.title(),
+            "summary": data.get("summary", ""),
+            "confidence_band": _BAND_LABELS.get(
+              (data.get("confidence_band") or "low").lower(),
+              "Confidence",
+            ),
+            "metadata": _format_metadata(metadata),
+            "evidence": _format_evidence(evidence),
+          }
         )
     workers.sort(key=lambda item: item["name"])
 
@@ -212,6 +259,8 @@ def _build_context(job: JobResponse) -> Dict[str, object]:
     except (ValueError, TypeError):
         market_score = 0
 
+    validation_block = _format_claim_links(payload.get("validation") or {})
+
     return {
         "molecule": molecule,
         "job_id": job.job_id,
@@ -220,6 +269,7 @@ def _build_context(job: JobResponse) -> Dict[str, object]:
         "recommendation": recommendation,
         "market_score": market_score,
         "worker_sections": workers,
+      "validation": validation_block,
     }
 
 

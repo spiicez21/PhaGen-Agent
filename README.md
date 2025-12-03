@@ -113,6 +113,12 @@ This API-first crawl honors robots.txt (see `crawler/src/robots.ts`) and caps pa
 - **JSON download**: `/reports` includes a job ID field that serializes the entire job payload for offline analysis or audit trails.
 - **Evidence viewer hooks**: every worker summary references the same `WorkerResult` payload so UI badges, PDF sections, and downstream BI exports stay in sync.
 
+## Validation & traceability
+
+- Every evidence snippet now receives a deterministic ID (e.g., `clinical-1`) when the master agent serializes results.
+- The innovation story is split into sentence-level claims, each linked to one or more evidence IDs; the payload exposes this under `validation` with pass/fail status plus linked counts.
+- `/comparison`, `/results`, and the PDF report highlight the validation summary so reviewers can confirm every claim is grounded before sharing deliverables.
+
 ## Comparison workspace
 
 - `/comparison` lets reviewers line up two or three molecules side-by-side with shared metrics, worker summaries, and top citations. It defaults to demo payloads but accepts real job IDs once they exist.

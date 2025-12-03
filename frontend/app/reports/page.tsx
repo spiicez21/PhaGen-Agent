@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { DEMO_JOB, REPORT_SECTIONS } from "../sample-data";
+import { DEMO_JOB, REPORT_SECTIONS, SAMPLE_PAYLOAD } from "../sample-data";
 
 const downloadBlob = (blob: Blob, filename: string) => {
   const url = window.URL.createObjectURL(blob);
@@ -77,6 +77,8 @@ export default function ReportsPage() {
     }
   };
 
+  const validation = SAMPLE_PAYLOAD.validation;
+
   return (
     <div className="section-stack">
       <section className="section-card space-y-4">
@@ -124,6 +126,31 @@ export default function ReportsPage() {
           ))}
         </ol>
       </section>
+
+      {validation && (
+        <section className="section-card space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="eyebrow">Validation snapshot</p>
+              <h2 className="text-xl font-semibold">Claims ↔ Evidence</h2>
+            </div>
+            <span className={`validation-chip validation-chip--${validation.status}`}>
+              {validation.claims_linked}/{validation.claims_total} linked
+            </span>
+          </div>
+          <div className="validation-claims">
+            {validation.claim_links.map((claim) => (
+              <article key={claim.claim_id} className="validation-claim space-y-2">
+                <p className="eyebrow">{claim.worker}</p>
+                <p>{claim.claim_text}</p>
+                <p className="subtle-text">
+                  Evidence IDs · {claim.evidence_ids.length ? claim.evidence_ids.join(", ") : "None"}
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       {REPORT_SECTIONS.map((section) => (
         <section key={section.title} className="section-card space-y-2">
