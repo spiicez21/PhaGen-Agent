@@ -23,10 +23,14 @@ class MarketWorker(Worker):
             extra_context={"market": market_data, "score": score} if market_data else {"score": score},
             fallback=fallback_summary,
         )
+        confidence, confidence_band = self._calibrate_confidence(
+            self._score_confidence(market_data)
+        )
         return WorkerResult(
             summary=summary,
             evidence=self._to_evidence(passages, "market"),
-            confidence=self._score_confidence(market_data),
+            confidence=confidence,
+            confidence_band=confidence_band,
             metadata=self._build_metadata(market_data, score),
         )
 

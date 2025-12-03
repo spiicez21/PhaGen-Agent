@@ -25,6 +25,7 @@ class WorkerResult:
     summary: str
     evidence: List[EvidenceItem]
     confidence: float
+    confidence_band: str
     metadata: Dict[str, str] = field(default_factory=dict)
 
 

@@ -20,6 +20,11 @@ class Worker(ABC):
         "literature": 2,
         "patent": 3,
     }
+    CONFIDENCE_THRESHOLDS = (
+        (0.8, "high"),
+        (0.6, "medium"),
+        (0.0, "low"),
+    )
 
     def __init__(
         self,
@@ -137,3 +142,10 @@ class Worker(ABC):
         priority = self.SOURCE_PRIORITY.get(source, 10)
         rank = passage.get("rank") or 999
         return priority, rank
+
+    def _calibrate_confidence(self, score: float) -> tuple[float, str]:
+        clamped = max(0.0, min(1.0, score))
+        for threshold, label in self.CONFIDENCE_THRESHOLDS:
+            if clamped >= threshold:
+                return clamped, label
+        return clamped, "low"

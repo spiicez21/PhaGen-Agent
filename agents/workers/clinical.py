@@ -23,10 +23,14 @@ class ClinicalWorker(Worker):
             extra_context={"trials": trials} if trials else None,
             fallback=fallback_summary,
         )
+        confidence, confidence_band = self._calibrate_confidence(
+            self._score_confidence(trials)
+        )
         return WorkerResult(
             summary=summary,
             evidence=self._to_evidence(passages, "clinical"),
-            confidence=self._score_confidence(trials),
+            confidence=confidence,
+            confidence_band=confidence_band,
             metadata=self._build_metadata(trials),
         )
 

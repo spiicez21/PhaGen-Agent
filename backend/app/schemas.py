@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -22,6 +22,7 @@ class WorkerResult(BaseModel):
     summary: str
     evidence: List[EvidenceItem]
     confidence: float = Field(ge=0.0, le=1.0)
+    confidence_band: Literal["low", "medium", "high"]
     metadata: Dict[str, str] = Field(default_factory=dict)
 
 

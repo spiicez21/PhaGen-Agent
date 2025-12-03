@@ -45,10 +45,14 @@ class PatentWorker(Worker):
             else None,
             fallback=fallback_summary,
         )
+        confidence, confidence_band = self._calibrate_confidence(
+            self._score_confidence(patents, guardrails)
+        )
         return WorkerResult(
             summary=summary,
             evidence=self._to_evidence(passages, "patent"),
-            confidence=self._score_confidence(patents, guardrails),
+            confidence=confidence,
+            confidence_band=confidence_band,
             metadata=self._build_metadata(patents, guardrails),
         )
 

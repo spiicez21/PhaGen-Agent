@@ -22,10 +22,14 @@ class LiteratureWorker(Worker):
             extra_context={"articles": articles} if articles else None,
             fallback=fallback_summary,
         )
+        confidence, confidence_band = self._calibrate_confidence(
+            self._score_confidence(articles)
+        )
         return WorkerResult(
             summary=summary,
             evidence=self._build_evidence(articles, passages),
-            confidence=self._score_confidence(articles),
+            confidence=confidence,
+            confidence_band=confidence_band,
             metadata=self._build_metadata(articles),
         )
 

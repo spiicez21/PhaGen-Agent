@@ -23,6 +23,7 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - Synonym expansion worker now normalizes SMILES/canonical names into alias lists that feed every retriever query.
 - Source-ranking scorecard now prioritizes clinical > regulatory > literature > patent passages before grounding summaries.
 - Worker execution now enforces per-worker timeouts plus a small retry budget for flaky sources.
+- Confidence calibration now maps worker confidence into Low/Med/High bands before surfacing results.
 
 ### Phase 4 — Aggregation & reporting
 - Evidence tabs ship with confidence badges, metadata grids, and citation links for each worker panel so reviewers can drill into sources.
@@ -34,9 +35,6 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - Crawler status console and dataset/index manager expose queue metrics, robots summaries, rebuild, and purge controls.
 
 ## 🔜 Pending
-### Phase 3 — Worker intelligence & grounding
-- [ ] Confidence calibration: normalize each worker's 0–1 confidence into Low/Med/High bands before surfacing.
-
 ### Phase 4 — Aggregation & reporting
 - [ ] Master agent final synthesis prompt that merges worker JSON into the "Innovation Story" + recommendation rubric.
 - [ ] PDF generation flow (HTML → PDF) with evidence viewer hooks and download button in the frontend.
