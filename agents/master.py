@@ -13,6 +13,7 @@ from .models import (
     WorkerResult,
 )
 from .retrieval import Retriever
+from .synonyms import SynonymExpander
 from .workers.clinical import ClinicalWorker
 from .workers.patent import PatentWorker
 from .workers.literature import LiteratureWorker
@@ -25,10 +26,12 @@ class MasterAgent:
         top_k: int = 5,
         context_tokens: int = 1200,
         llm_client: LLMClient | None = None,
+        synonym_expander: SynonymExpander | None = None,
     ) -> None:
         retriever = Retriever(top_k=top_k, context_tokens=context_tokens)
         self.context_tokens = context_tokens
         self.llm = llm_client or LLMClient()
+        self.synonyms = synonym_expander or SynonymExpander()
         self.workers = {
             "clinical": ClinicalWorker(retriever, self.llm),
             "patent": PatentWorker(retriever, self.llm),
@@ -36,10 +39,21 @@ class MasterAgent:
             "market": MarketWorker(retriever, self.llm),
         }
 
-    def run(self, molecule: str, synonyms: list[str] | None = None) -> MasterRun:
+    def run(
+        self,
+        molecule: str,
+        synonyms: list[str] | None = None,
+        smiles: str | None = None,
+    ) -> MasterRun:
+        expanded_synonyms = self.synonyms.expand(
+            molecule,
+            provided_synonyms=synonyms,
+            smiles=smiles,
+        )
         request = WorkerRequest(
             molecule=molecule,
-            synonyms=synonyms or [],
+            synonyms=expanded_synonyms,
+            smiles=smiles,
             top_k=len(self.workers),
             context_tokens=self.context_tokens,
         )

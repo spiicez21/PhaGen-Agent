@@ -29,13 +29,40 @@ class Worker(ABC):
         raise NotImplementedError
 
     def run(self, request: WorkerRequest) -> WorkerResult:
-        passages = self.retriever.search(
-            query=request.molecule,
-            source_type=self.name,
-            top_k=request.top_k,
-            max_tokens=request.context_tokens,
-        )
-        return self.build_summary(request, passages)
+        queries = [request.molecule]
+        for synonym in request.synonyms:
+            if synonym and synonym.lower() != request.molecule.lower():
+                queries.append(synonym)
+
+        gathered: List[dict] = []
+        seen_ids: set[str] = set()
+        for term in queries:
+            results = self.retriever.search(
+                query=term,
+                source_type=self.name,
+                top_k=request.top_k,
+                max_tokens=request.context_tokens,
+            )
+            for result in results:
+                record_id = result.get("id") or f"{term}-{result.get('rank', len(gathered))}"
+                if record_id in seen_ids:
+                    continue
+                seen_ids.add(record_id)
+                gathered.append(result)
+                if len(gathered) >= request.top_k:
+                    break
+            if len(gathered) >= request.top_k:
+                break
+
+        if not gathered:
+            gathered = self.retriever.search(
+                query=request.molecule,
+                source_type=self.name,
+                top_k=request.top_k,
+                max_tokens=request.context_tokens,
+            )
+
+        return self.build_summary(request, gathered)
 
     def _to_evidence(self, passages: List[dict], default_type: str) -> List[EvidenceItem]:
         return [

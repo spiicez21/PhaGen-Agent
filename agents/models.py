@@ -31,7 +31,8 @@ class WorkerResult:
 @dataclass
 class WorkerRequest:
     molecule: str
-    synonyms: List[str]
+    synonyms: List[str] = field(default_factory=list)
+    smiles: Optional[str] = None
     top_k: int = 5
     context_tokens: int = 1200
 

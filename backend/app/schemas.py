@@ -35,6 +35,7 @@ class JobStatus(str, Enum):
 class JobCreateRequest(BaseModel):
     molecule: str
     synonyms: Optional[List[str]] = None
+    smiles: Optional[str] = None
 
 
 class JobResponse(BaseModel):

@@ -25,6 +25,7 @@ def _run_job(job_id: str, payload: JobCreateRequest) -> None:
         result = master_agent.run(
             molecule=payload.molecule,
             synonyms=payload.synonyms,
+            smiles=payload.smiles,
         )
         if not result.success:
             job_store.update_job(

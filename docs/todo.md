@@ -20,6 +20,7 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - Literature worker now summarizes mechanism-of-action evidence, cites DOI-backed passages, and exposes structured metadata for the dashboard.
 - Market worker now synthesizes TAM/incidence/competition context into a scored summary with structured metadata for the dashboard.
 - Workers now call the shared LLM runtime (Ollama Gemma2:2B by default) to synthesize summaries directly from retriever output with graceful fallbacks.
+- Synonym expansion worker now normalizes SMILES/canonical names into alias lists that feed every retriever query.
 
 ### Phase 4 — Aggregation & reporting
 - Evidence tabs ship with confidence badges, metadata grids, and citation links for each worker panel so reviewers can drill into sources.
@@ -32,7 +33,6 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 
 ## 🔜 Pending
 ### Phase 3 — Worker intelligence & grounding
-- [ ] Synonym expansion worker: convert SMILES → canonical name → synonyms/aliases for better retrieval.
 - [ ] Source-ranking scorecard: prioritize clinical > regulatory > literature > patent passages when grounding workers.
 - [ ] Worker timeouts & retries: add per-worker timeout window plus retry budget for flaky sources.
 - [ ] Confidence calibration: normalize each worker's 0–1 confidence into Low/Med/High bands before surfacing.
