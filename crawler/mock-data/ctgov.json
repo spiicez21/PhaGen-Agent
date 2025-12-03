@@ -1,0 +1,20 @@
+{
+  "study": {
+    "nct_id": "NCT01907900",
+    "title": "Pirfenidone in Progressive Fibrosing ILD",
+    "sponsor": "Genentech, Inc.",
+    "status": "Completed",
+    "phase": "Phase 2",
+    "indication": "Progressive fibrosing interstitial lung disease",
+    "enrollment": 253,
+    "primary_outcome": "Change in FVC over 24 weeks",
+    "result_summary": "Pirfenidone slowed the decline in forced vital capacity versus placebo.",
+    "references": [
+      {
+        "type": "journal",
+        "citation": "Maher TM et al. Lancet Respir Med. 2020;8(2):147-157.",
+        "url": "https://clinicaltrials.gov/study/NCT01907900"
+      }
+    ]
+  }
+}

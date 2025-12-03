@@ -22,6 +22,10 @@ Thumbs.db
 indexes/*.faiss
 indexes/*.bin
 indexes/*.chroma
+indexes/chroma
+crawler/storage/
+crawler/**/*.dataset
+crawler/**/*.jsonl
 
 # devfiles
 ignore.md

@@ -1,0 +1,13 @@
+{
+  "regulatory": {
+    "agency": "FDA",
+    "product": "Esbriet (pirfenidone)",
+    "approval_year": 2014,
+    "label_highlights": [
+      "Indicated for idiopathic pulmonary fibrosis.",
+      "Monitor liver function before and during therapy.",
+      "Avoid strong CYP1A2 inhibitors when possible."
+    ],
+    "url": "https://www.fda.gov/drugs/postmarket-drug-safety-information-patients-and-providers/pirfenidone-esbriet-information"
+  }
+}

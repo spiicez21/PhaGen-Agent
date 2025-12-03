@@ -1,0 +1,3 @@
+# Root dependency bundle for all Python components
+-r backend/requirements.txt
+-r indexes/requirements.txt
