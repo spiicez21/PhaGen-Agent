@@ -1,22 +1,119 @@
-import { REPORT_SECTIONS } from "../sample-data";
+"use client";
+
+import { useState } from "react";
+import { DEMO_JOB, REPORT_SECTIONS } from "../sample-data";
+
+const downloadBlob = (blob: Blob, filename: string) => {
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.URL.revokeObjectURL(url);
+};
 
 export default function ReportsPage() {
+  const [jobId, setJobId] = useState<string>(DEMO_JOB.id);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isExportingJson, setIsExportingJson] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const normalizedJobId = jobId.trim();
+
+  const requireJobId = (): string | null => {
+    if (!normalizedJobId) {
+      setError("Enter a job ID before exporting.");
+      return null;
+    }
+    setError(null);
+    return normalizedJobId;
+  };
+
+  const handlePdfDownload = async () => {
+    const id = requireJobId();
+    if (!id) return;
+    try {
+      setIsDownloading(true);
+      setStatus("Preparing PDF...");
+      const response = await fetch(`/api/jobs/${id}/report.pdf`);
+      if (!response.ok) {
+        throw new Error(`Backend responded with ${response.status}`);
+      }
+      const pdfBlob = await response.blob();
+      downloadBlob(pdfBlob, `phagen-report-${id}.pdf`);
+      setStatus("PDF downloaded successfully.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to download PDF.");
+      setStatus(null);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleJsonExport = async () => {
+    const id = requireJobId();
+    if (!id) return;
+    try {
+      setIsExportingJson(true);
+      setStatus("Fetching run payload...");
+      const response = await fetch(`/api/jobs/${id}`);
+      if (!response.ok) {
+        throw new Error(`Backend responded with ${response.status}`);
+      }
+      const payload = await response.json();
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: "application/json",
+      });
+      downloadBlob(blob, `phagen-run-${id}.json`);
+      setStatus("JSON exported successfully.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to export JSON.");
+      setStatus(null);
+    } finally {
+      setIsExportingJson(false);
+    }
+  };
+
   return (
     <div className="section-stack">
       <section className="section-card space-y-4">
         <p className="eyebrow">Report workspace</p>
         <h1 className="text-2xl font-semibold">Full deliverable layout</h1>
         <p className="subtle-text">
-          Review, edit, and export the structured report. PDF + JSON export hooks connect to backend automation.
+          Review, edit, and export the structured report. PDF + JSON export hooks connect directly to the backend jobs API.
         </p>
-        <div className="flex gap-3">
-          <button className="btn-primary" type="button">
-            Download PDF
+        <div className="grid gap-3 md:grid-cols-[2fr_auto_auto] md:items-end">
+          <label className="space-y-2">
+            <span className="eyebrow">Job ID</span>
+            <input
+              className="input"
+              placeholder="JOB-XXXX"
+              value={jobId}
+              onChange={(event) => setJobId(event.target.value)}
+            />
+          </label>
+          <button
+            className="btn-primary"
+            type="button"
+            onClick={handlePdfDownload}
+            disabled={isDownloading}
+          >
+            {isDownloading ? "Generating..." : "Download PDF"}
           </button>
-          <button className="btn-secondary" type="button">
-            Export JSON
+          <button
+            className="btn-secondary"
+            type="button"
+            onClick={handleJsonExport}
+            disabled={isExportingJson}
+          >
+            {isExportingJson ? "Exporting..." : "Export JSON"}
           </button>
         </div>
+        {status && <p className="text-sm text-emerald-400">{status}</p>}
+        {error && <p className="text-sm text-rose-400">{error}</p>}
       </section>
 
       <section className="section-card space-y-4">

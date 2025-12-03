@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Response
 
 from ..config import get_settings
 from ..jobs import InMemoryJobStore
+from ..reporting import generate_report_pdf
 from ..schemas import JobCreateRequest, JobResponse, JobStatus
 
 try:
@@ -34,10 +35,12 @@ def _run_job(job_id: str, payload: JobCreateRequest) -> None:
                 payload={"failures": [failure.__dict__ for failure in result.failures]},
             )
             return
+        serialized = master_agent.serialize(result.output)
+        serialized.setdefault("molecule", payload.molecule)
         job_store.update_job(
             job_id,
             status=JobStatus.completed,
-            payload=master_agent.serialize(result.output),
+            payload=serialized,
             recommendation=result.output.recommendation,
         )
     except Exception as exc:  # pragma: no cover - logging stub
@@ -61,3 +64,27 @@ def get_job(job_id: str) -> JobResponse:
         return job_store.get_job(job_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Job not found") from exc
+
+
+@router.get("/{job_id}/report.pdf")
+def download_report(job_id: str) -> Response:
+    try:
+        job = job_store.get_job(job_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Job not found") from exc
+
+    if job.status != JobStatus.completed or not job.payload:
+        raise HTTPException(status_code=400, detail="Job is not ready for export")
+
+    try:
+        pdf_bytes = generate_report_pdf(job)
+    except Exception as exc:  # pragma: no cover - rendering depends on runtime libs
+        raise HTTPException(status_code=500, detail=f"Failed to render PDF: {exc}") from exc
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="phagen-report-{job_id}.pdf"'
+        },
+    )

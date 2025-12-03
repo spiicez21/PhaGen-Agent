@@ -28,6 +28,7 @@ const PANEL_META: Record<WorkerKind, { label: string; description: string; empty
 
 interface EvidenceTabsProps {
   workers?: Record<string, WorkerResultPayload>;
+  reportJobId?: string;
 }
 
 const formatMetadataValue = (value: string): string => {
@@ -38,7 +39,7 @@ const formatMetadataValue = (value: string): string => {
       const parsed = JSON.parse(trimmed);
       if (Array.isArray(parsed)) return `${parsed.length} entries`;
       if (typeof parsed === "object" && parsed !== null) return `${Object.keys(parsed).length} fields`;
-    } catch (err) {
+    } catch {
       return value;
     }
   }
@@ -55,7 +56,7 @@ const confidenceLabel = (band?: WorkerResultPayload["confidence_band"], score?: 
   return "Signal needs validation";
 };
 
-export const EvidenceTabs = ({ workers = {} }: EvidenceTabsProps) => {
+export const EvidenceTabs = ({ workers = {}, reportJobId }: EvidenceTabsProps) => {
   const workerKeys = useMemo(() => (Object.keys(PANEL_META) as WorkerKind[]), []);
   const available = useMemo(
     () => workerKeys.filter((key) => Boolean(workers[key])),
@@ -68,6 +69,7 @@ export const EvidenceTabs = ({ workers = {} }: EvidenceTabsProps) => {
 
   const meta = PANEL_META[resolvedActive];
   const worker = workers[resolvedActive];
+  const reportHref = reportJobId ? `/api/jobs/${reportJobId}/report.pdf` : undefined;
 
   return (
     <section className="panel" aria-labelledby="evidence-heading">
@@ -105,6 +107,18 @@ export const EvidenceTabs = ({ workers = {} }: EvidenceTabsProps) => {
             <p className="summary-card__confidence">
               {confidenceLabel(worker.confidence_band, worker.confidence)}
             </p>
+            {reportHref && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                <a
+                  className="btn-secondary"
+                  href={reportHref}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Download run PDF
+                </a>
+              </div>
+            )}
             {Object.keys(worker.metadata ?? {}).length > 0 && (
               <dl className="metadata-grid">
                 {Object.entries(worker.metadata).map(([key, value]) => (
