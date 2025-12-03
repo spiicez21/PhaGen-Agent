@@ -32,23 +32,48 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - [ ] Literature worker: summarize mechanism-of-action evidence and cite passages.
 - [ ] Market worker: produce market score based on incidence/prevalence proxies plus competitor context.
 - [ ] Integrate chosen LLM runtime (Ollama Gemma2:2B or remote) with the worker prompts and retriever output.
+- [ ] Synonym expansion worker: convert SMILES → canonical name → synonyms/aliases for better retrieval.
+- [ ] Source-ranking scorecard: prioritize clinical > regulatory > literature > patent passages when grounding workers.
+- [ ] Worker timeouts & retries: add per-worker timeout window plus retry budget for flaky sources.
+- [ ] Confidence calibration: normalize each worker's 0–1 confidence into Low/Med/High bands before surfacing.
 
 ### Phase 4 — Aggregation & reporting
 - [ ] Master agent final synthesis prompt that merges worker JSON into the "Innovation Story" + recommendation rubric.
 - [ ] PDF generation flow (HTML → PDF) with evidence viewer hooks and download button in the frontend.
+- [ ] Multi-molecule comparison mode for side-by-side evidence (stretch demo goal).
+- [ ] Validation pass linking every claim in the story to evidence IDs.
+- [ ] Fallback summarizer that emits a lite summary if the LLM path fails.
+- [ ] Report versioning so each molecule keeps V1/V2 snapshots for auditability.
 
 ### Phase UI — Experience & admin
 - [ ] Implement stretch visualizations (knowledge graph, citation trace, molecule comparison) after MVP.
+- [ ] Pagination + filtering for saved runs (status, date range, recommendation).
+- [ ] Standardize confidence color palette across all evidence components.
+- [ ] Worker-specific error states (timeout, missing data, robots block) in the UI.
+- [ ] Visual diff viewer to compare report versions (V1 vs V2 changes).
 
 ### Data & infra follow-ups
 - [ ] Flesh out Postgres schema (`molecules`, `jobs`, `documents`, `passages`, `reports`) and wire persistence into backend.
 - [ ] Add MinIO/S3 storage wiring for raw documents and PDF artifacts.
 - [ ] Extend crawler normalization (chunking, boilerplate stripping, PII redaction) per Section 5 guidance.
+- [ ] Index snapshotting cadence (daily/monthly builds) for reproducibility.
+- [ ] Embedding cache to avoid re-embedding unchanged passages.
+- [ ] Domain-level crawl budgets to limit pages per source.
+- [ ] Evidence deduplication across clinical/literature corpora.
 
 ### Quality, guardrails, and ops
 - [ ] Implement retrieval precision checks / coverage metrics plus guardrails (evidence thresholds, anomaly detection).
 - [ ] Set up Docker Compose & GitHub Actions workflow described in Section 10 (tests + image builds).
 - [ ] Prepare the hackathon demo script, slides, and fallback assets outlined in Section 11.
+- [ ] Model hallucination detector or citation-gap checker for final stories.
+- [ ] API call budget monitor for NCBI/OpenFDA rate limits.
+- [ ] Standardize LLM temperature per worker for consistent tone.
+- [ ] Build an evals suite (5–10 sample molecules with expected outputs).
+- [ ] SLA-style logging: latency, token usage, and failure counts per worker.
 
 ### Stretch / future
 - [ ] Track stretch ideas from Section 12 (active learning loop, patent semantic matching, continuous crawler, etc.) once the MVP is stable.
+- [ ] Horizontal autoscaling for agent workers.
+- [ ] External `/api/analyze-molecule` endpoint for partners.
+- [ ] Collaboration surface (annotations, shared notes, mentions).
+- [ ] Molecule–disease mapping model for proactive repurposing suggestions.
