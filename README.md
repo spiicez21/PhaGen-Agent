@@ -67,7 +67,51 @@ The repo-level `requirements.txt` simply pulls in `backend/requirements.txt` and
    ```
    This writes embeddings to `indexes/chroma/` (git-ignored). Re-run the script any time new crawl output lands so FAISS/Chroma stays current.
 
-See `docs/architecture.md` for a diagram plus detailed flow.
+## Architecture overview
+
+```
+┌────────────┐   REST/WS   ┌────────────┐   in-proc   ┌────────────┐
+│ Next.js UI │ ───────────▶│ FastAPI API│────────────▶│ MasterAgent│
+└────────────┘             └────────────┘             └────┬─┬─┬───┘
+                            │ │ │
+                        ┌───────────┘ │ └─────────────┐
+                        ▼             ▼               ▼
+                     Clinical worker  Patent worker   Literature worker …
+```
+
+Each piece lives in its own directory but shares the same repo:
+
+- **Frontend (`frontend/`)** renders the molecule intake, job history, evidence tabs, and the new report workspace with inline PDF/JSON export hooks.
+- **Backend (`backend/`)** exposes `/api/jobs` for orchestration plus `/api/jobs/{id}/report.pdf` for HTML→PDF exports. Background tasks fan out to the agents package.
+- **Agents (`agents/`)** contain `MasterAgent`, shared `LLMClient`, synonym expansion, and four specialized workers. A structured payload powers both the UI and PDF renderer.
+- **Indexes (`indexes/`)** bundle the Chroma/FAISS build script so every crawl refresh can be re-indexed with one command.
+- **Crawler (`crawler/`)** is a Crawlee project that normalizes CT.gov, PubMed Central, FDA, and patent feeds into JSON ready for embedding.
+- **Infra (`infra/`)** holds Docker Compose wiring for Postgres, MinIO/S3-compatible storage, Ollama/OpenAI endpoints, frontend, and backend services.
+
+See `docs/architecture.md` for the full sequence diagram and responsibilities per component.
+
+## Pipeline & orchestration
+
+1. **Intake** – the Next.js dashboard posts molecules (plus optional synonyms/SMILES) to `/api/jobs`.
+2. **Job runner** – FastAPI enqueues the request, spawns a background task, expands synonyms, and parameters for each worker.
+3. **Retrieval/RAG** – workers query Chroma via the shared retriever, apply source-ranking, and summarize passages via the shared LLM runtime (Ollama by default, OpenAI optional).
+4. **Aggregation** – `MasterAgent` merges worker JSON, runs the Phase 4 synthesis prompt, and persists the innovation story + rubric-based recommendation into the job store.
+5. **Reporting** – the frontend polls `/api/jobs/{id}` until complete; the same payload fuels the Evidence tabs, PDF export (`/api/jobs/{id}/report.pdf`), and JSON download button in `/reports`.
+
+## Data & indexing pipeline
+
+1. Run the Crawlee project to refresh datasets under `crawler/storage/`.
+2. Execute `indexes/build_index.py` from the repo root (inside `.venv`) to embed new passages into `indexes/chroma/`.
+3. Point the agents retriever at the fresh Chroma snapshot (default path already aligns with `indexes/chroma/`).
+4. Redeploy/restart workers if the embeddings or retriever settings change so new sources are picked up.
+
+This API-first crawl honors robots.txt (see `crawler/src/robots.ts`) and caps page fragments at 5 KB before indexing. Extend the schema if you add new corpora.
+
+## Export & reporting
+
+- **HTML→PDF**: the backend renders a Jinja2 template with WeasyPrint (`backend/app/reporting.py`). Frontend buttons and Evidence tabs now call the `/api/jobs/{id}/report.pdf` endpoint directly.
+- **JSON download**: `/reports` includes a job ID field that serializes the entire job payload for offline analysis or audit trails.
+- **Evidence viewer hooks**: every worker summary references the same `WorkerResult` payload so UI badges, PDF sections, and downstream BI exports stay in sync.
 
 ## Crawling & compliance
 
