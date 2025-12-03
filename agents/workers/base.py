@@ -14,6 +14,13 @@ logger = logging.getLogger(__name__)
 
 
 class Worker(ABC):
+    SOURCE_PRIORITY = {
+        "clinical": 0,
+        "regulatory": 1,
+        "literature": 2,
+        "patent": 3,
+    }
+
     def __init__(
         self,
         name: str,
@@ -62,7 +69,10 @@ class Worker(ABC):
                 max_tokens=request.context_tokens,
             )
 
-        return self.build_summary(request, gathered)
+        ordered = sorted(gathered, key=self._source_rank)
+        limited = ordered[: request.top_k]
+
+        return self.build_summary(request, limited)
 
     def _to_evidence(self, passages: List[dict], default_type: str) -> List[EvidenceItem]:
         return [
@@ -121,3 +131,9 @@ class Worker(ABC):
         except LLMClientError as exc:  # pragma: no cover - runtime dependency
             logger.warning("LLM summary failed for %s: %s", self.name, exc)
             return fallback
+
+    def _source_rank(self, passage: dict) -> tuple[int, int]:
+        source = (passage.get("source_type") or self.name).lower()
+        priority = self.SOURCE_PRIORITY.get(source, 10)
+        rank = passage.get("rank") or 999
+        return priority, rank
