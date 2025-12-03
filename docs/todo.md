@@ -17,6 +17,7 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 ### Phase 3 — Worker intelligence
 - ClinicalTrials agent now parses registry feeds into structured trials with phase, status, endpoints, and populations surfaced in metadata.
 - Patent agent now surfaces assignees, priority dates, blocking claim summaries, and FDA contraindication notes directly from retrieved passages.
+- Literature worker now summarizes mechanism-of-action evidence, cites DOI-backed passages, and exposes structured metadata for the dashboard.
 
 ### Phase 4 — Aggregation & reporting
 - Evidence tabs ship with confidence badges, metadata grids, and citation links for each worker panel so reviewers can drill into sources.
@@ -29,7 +30,6 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 
 ## 🔜 Pending
 ### Phase 3 — Worker intelligence & grounding
-- [ ] Literature worker: summarize mechanism-of-action evidence and cite passages.
 - [ ] Market worker: produce market score based on incidence/prevalence proxies plus competitor context.
 - [ ] Integrate chosen LLM runtime (Ollama Gemma2:2B or remote) with the worker prompts and retriever output.
 - [ ] Synonym expansion worker: convert SMILES → canonical name → synonyms/aliases for better retrieval.
