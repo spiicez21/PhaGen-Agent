@@ -42,6 +42,10 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - [ ] Validation pass linking every claim in the story to evidence IDs.
 - [ ] Fallback summarizer that emits a lite summary if the LLM path fails.
 - [ ] Report versioning so each molecule keeps V1/V2 snapshots for auditability.
+- [ ] Integrate RDKit rendering into the report generator (SVG/PNG outputs embedded into PDF & HTML).
+- [ ] Implement `reports/images/` storage schema for RDKit-generated assets and provenance metadata (source: SMILES/INCHI/PubChem).
+- [ ] Add RDKit unit tests for canonical rendering (visual diff baseline images).
+- [ ] PubChem REST fallback for structure images if RDKit fails to parse SMILES or CID.
 
 ### Phase UI — Experience & admin
 - [ ] Implement stretch visualizations (knowledge graph, citation trace, molecule comparison) after MVP.
@@ -49,6 +53,8 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - [ ] Standardize confidence color palette across all evidence components.
 - [ ] Worker-specific error states (timeout, missing data, robots block) in the UI.
 - [ ] Visual diff viewer to compare report versions (V1 vs V2 changes).
+- [ ] Molecule structure viewer component (SVG viewer + zoom + download) powered by RDKit-generated SVGs.
+- [ ] Add "Request structure" action in molecule intake to create SMILES → RDKit render.
 
 ### Data & infra follow-ups
 - [ ] Flesh out Postgres schema (`molecules`, `jobs`, `documents`, `passages`, `reports`) and wire persistence into backend.
@@ -58,6 +64,11 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - [ ] Embedding cache to avoid re-embedding unchanged passages.
 - [ ] Domain-level crawl budgets to limit pages per source.
 - [ ] Evidence deduplication across clinical/literature corpora.
+- [ ] Add `rdkit-service` Docker image (conda + rdkit + pillow) to `docker-compose.yml` for on-demand rendering.
+- [ ] Add `smiles-normalizer` job that canonicalizes SMILES/InChI via RDKit before indexing/synonym expansion.
+- [ ] Add optional OSRA image pipeline for OCR-to-SMILES conversion of scraped diagrams (only when allowed).
+- [ ] Hook RDKit rendering into indexes and reports pipelines so structure images are available to workers.
+- [ ] Image provenance schema storing `image_id`, `source_type` (rdkit/pubchem/scrape), `source_ref` (SMILES/URL/CID), license, and `generated_at`.
 
 ### Quality, guardrails, and ops
 - [ ] Implement retrieval precision checks / coverage metrics plus guardrails (evidence thresholds, anomaly detection).
@@ -69,9 +80,42 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - [ ] Build an evals suite (5–10 sample molecules with expected outputs).
 - [ ] SLA-style logging: latency, token usage, and failure counts per worker.
 
+#### ➕ Added — Security & Compliance (Core)
+- [ ] Zero Data Retention (ZDR) mode flag that disables persistence of input documents/user uploads (clear memory + no S3 writes).
+- [ ] VPC / On-Prem / Self-Host deployment option (Terraform + Docker Compose templates).
+- [ ] Tenant isolation & RBAC with tenant-scoped DB schema/row-level permissions plus UI/API roles.
+- [ ] End-to-end encryption: TLS 1.3 in transit, AES-256 at rest (DB/S3) with KMS-managed keys.
+- [ ] Centralized secrets management (Vault or cloud KMS) with rotating keys.
+- [ ] Immutable audit logs for worker runs, data access, and report generation (timestamps, user, job_id) with retention policy.
+- [ ] PII redaction & DLP to scrub sensitive fields before storage and block exfiltration of PHI/email identifiers.
+- [ ] Network egress controls enforcing default-deny for customer-hosted agents.
+- [ ] Integrated SAST/DAST & dependency scanning (Snyk/Dependabot) in CI.
+- [ ] Pen testing & vulnerability management cadence (quarterly pen tests, critical CVE patch SLA).
+- [ ] Incident response + breach communication plan with notify list and SLA.
+- [ ] Compliance artifacts: SOC2 controls, ISO27001 checklist, HIPAA/GxP mapping for customer audits.
+- [ ] Data residency options plus DPA/BAA templates for enterprise deals.
+- [ ] Monitoring & SIEM integration forwarding audit logs to Splunk/Datadog/Elastic.
+- [ ] Periodic access reviews & enforced MFA for admin roles.
+- [ ] Privacy & legal review pack (privacy FAQ, data use statement, legal review dossier).
+
+#### ➕ Added — Security Tests & Validation
+- [ ] Automated test verifying ZDR mode purges temp files and prevents S3 writes.
+- [ ] CI job running static analysis plus container vulnerability scan (Trivy) on `rdkit-service` and other images.
+- [ ] E2E security smoke test that attempts egress from agents; CI fails if egress succeeds in locked deployments.
+
 ### Stretch / future
 - [ ] Track stretch ideas from Section 12 (active learning loop, patent semantic matching, continuous crawler, etc.) once the MVP is stable.
 - [ ] Horizontal autoscaling for agent workers.
 - [ ] External `/api/analyze-molecule` endpoint for partners.
 - [ ] Collaboration surface (annotations, shared notes, mentions).
 - [ ] Molecule–disease mapping model for proactive repurposing suggestions.
+- [ ] Hardware-backed key storage (HSM) for high-assurance customers.
+- [ ] Signed container images and supply-chain verification (in-toto).
+- [ ] Private model hosting with strict access controls for local LLMs.
+- [ ] RDKit GPU acceleration path for large batch image rendering plus sandbox for untrusted SMILES inputs.
+
+## Notes & recommended priorities
+- Security is non-negotiable for pharma customers — prioritize VPC/Self-host, ZDR mode, RBAC, and audit logs early.
+- RDKit integration is low-risk/high-value: land `rdkit-service` soon so UI and reports embed canonical structures; add unit tests to avoid regressions.
+- CI/CD must include container and dependency scanning from day one to cover RDKit/OSRA binaries.
+- Implement egress controls and PII redaction before any customer demo that touches real data.
