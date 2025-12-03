@@ -20,6 +20,8 @@ class Worker(ABC):
         passages = self.retriever.search(
             query=request.molecule,
             source_type=self.name,
+            top_k=request.top_k,
+            max_tokens=request.context_tokens,
         )
         return self.build_summary(request, passages)
 

@@ -7,11 +7,9 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - **Phase 1 (Core orchestration & mocks):** Master agent skeleton with four worker stubs, deterministic mock data, and the basic Next.js dashboard + FastAPI backend flow are running end-to-end.
 - **Phase 2 (Crawling foundation):** Crawlee project configured with API-first sources, robots-aware fallback, and datasets refreshed via `npm run crawl`.
 - **Phase 2 (Indexer):** Python Chroma/FAISS pipeline (`indexes/build_index.py`) now ingests crawler output inside the shared `.venv` and persists embeddings to `indexes/chroma/`.
+- **Phase 2 (Retriever):** Agents call a real Chroma-backed retriever with per-worker context budgeting instead of the previous mock snippets.
 
 ## 🔜 Pending
-### Phase 2 — Crawling & RAG
-- [ ] Implement the retriever + context-window limiter so worker prompts get top-k passages with token budgeting.
-
 ### Phase 3 — Worker intelligence & grounding
 - [ ] ClinicalTrials worker: parse trials (phase, status, endpoints, populations) from indexed passages.
 - [ ] Patent & Regulatory worker: surface assignees, priority dates, blocking claims, and contraindication notes.

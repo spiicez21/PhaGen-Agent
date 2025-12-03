@@ -33,6 +33,7 @@ class WorkerRequest:
     molecule: str
     synonyms: List[str]
     top_k: int = 5
+    context_tokens: int = 1200
 
 
 @dataclass

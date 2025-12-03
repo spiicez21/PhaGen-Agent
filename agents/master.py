@@ -19,8 +19,9 @@ from .workers.market import MarketWorker
 
 
 class MasterAgent:
-    def __init__(self, top_k: int = 5) -> None:
-        retriever = Retriever(top_k=top_k)
+    def __init__(self, top_k: int = 5, context_tokens: int = 1200) -> None:
+        retriever = Retriever(top_k=top_k, context_tokens=context_tokens)
+        self.context_tokens = context_tokens
         self.workers = {
             "clinical": ClinicalWorker(retriever),
             "patent": PatentWorker(retriever),
@@ -33,6 +34,7 @@ class MasterAgent:
             molecule=molecule,
             synonyms=synonyms or [],
             top_k=len(self.workers),
+            context_tokens=self.context_tokens,
         )
         worker_outputs: Dict[str, WorkerResult] = {}
         failures: list[WorkerFailure] = []
