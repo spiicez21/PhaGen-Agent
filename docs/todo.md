@@ -3,18 +3,29 @@
 This to-do list is distilled from the implementation roadmap in `ignore.md`. Tasks we have already finished are captured under **Completed**, while remaining items stay under **Pending** so the team can pick them up quickly.
 
 ## ✅ Completed
-- **Phase 0 (Prep):** Monorepo scaffold (`frontend/`, `backend/`, `agents/`, `crawler/`, `indexes/`, `infra/`, `docs/`) plus executive-summary README are in place.
-- **Phase 1 (Core orchestration & mocks):** Master agent skeleton with four worker stubs, deterministic mock data, and the basic Next.js dashboard + FastAPI backend flow are running end-to-end.
-- **Phase 2 (Crawling foundation):** Crawlee project configured with API-first sources, robots-aware fallback, and datasets refreshed via `npm run crawl`.
-- **Phase 2 (Indexer):** Python Chroma/FAISS pipeline (`indexes/build_index.py`) now ingests crawler output inside the shared `.venv` and persists embeddings to `indexes/chroma/`.
-- **Phase 2 (Retriever):** Agents call a real Chroma-backed retriever with per-worker context budgeting instead of the previous mock snippets.
-- **Phase UI (Core screens):** Landing hero, molecule intake, job status timeline, innovation story summary, and multi-panel evidence dashboard now reflect ~70% of the UI blueprint.
-- **Phase 4 (Evidence UI polish):** Evidence tabs ship with confidence badges, metadata grids, and citation links for each worker panel so reviewers can drill into sources.
-- **Phase UI (Experience):** Full report workspace renders PDF/JSON export controls plus sectionized content, matching the deliverable spec.
-- **Phase UI (History):** Saved-run workspace lists molecules with status/recommendation, quick open, and PDF download actions.
-- **Phase UI (Admin):** Crawler status console and dataset/index manager expose queue metrics, robots summaries, rebuild, and purge controls.
-- **Phase 3 (Clinical worker):** ClinicalTrials agent now parses registry feeds into structured trials with phase, status, endpoints, and populations surfaced in metadata.
-- **Phase 3 (Patent & Regulatory worker):** Patent agent now surfaces assignees, priority dates, blocking claim summaries, and FDA contraindication notes directly from retrieved passages.
+### Phase 0 — Prep
+- Monorepo scaffold (`frontend/`, `backend/`, `agents/`, `crawler/`, `indexes/`, `infra/`, `docs/`) plus executive-summary README are in place.
+
+### Phase 1 — Core orchestration & mocks
+- Master agent skeleton with four worker stubs, deterministic mock data, and the basic Next.js dashboard + FastAPI backend flow are running end-to-end.
+
+### Phase 2 — Data plumbing
+- Crawlee project configured with API-first sources, robots-aware fallback, and datasets refreshed via `npm run crawl`.
+- Python Chroma/FAISS pipeline (`indexes/build_index.py`) now ingests crawler output inside the shared `.venv` and persists embeddings to `indexes/chroma/`.
+- Agents call a real Chroma-backed retriever with per-worker context budgeting instead of the previous mock snippets.
+
+### Phase 3 — Worker intelligence
+- ClinicalTrials agent now parses registry feeds into structured trials with phase, status, endpoints, and populations surfaced in metadata.
+- Patent agent now surfaces assignees, priority dates, blocking claim summaries, and FDA contraindication notes directly from retrieved passages.
+
+### Phase 4 — Aggregation & reporting
+- Evidence tabs ship with confidence badges, metadata grids, and citation links for each worker panel so reviewers can drill into sources.
+
+### Phase UI — Experience & admin
+- Landing hero, molecule intake, job status timeline, innovation story summary, and multi-panel evidence dashboard now reflect ~70% of the UI blueprint.
+- Full report workspace renders PDF/JSON export controls plus sectionized content, matching the deliverable spec.
+- Saved-run workspace lists molecules with status/recommendation, quick open, and PDF download actions.
+- Crawler status console and dataset/index manager expose queue metrics, robots summaries, rebuild, and purge controls.
 
 ## 🔜 Pending
 ### Phase 3 — Worker intelligence & grounding
