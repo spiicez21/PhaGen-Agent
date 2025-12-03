@@ -114,3 +114,21 @@ export interface ReportSection {
   title: string;
   body: string;
 }
+
+export type MasterPayloadWithMeta = MasterPayload & { molecule?: string };
+
+export interface ComparisonSlot {
+  jobId: string;
+  molecule: string;
+  lastUpdated: string;
+  payload: MasterPayload;
+}
+
+export interface JobApiResponse {
+  job_id: string;
+  status: JobStatus;
+  created_at: string;
+  updated_at: string;
+  payload?: MasterPayloadWithMeta;
+  recommendation?: string;
+}

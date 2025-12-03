@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Response
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Response
 
 from ..config import get_settings
 from ..jobs import InMemoryJobStore
@@ -64,6 +64,23 @@ def get_job(job_id: str) -> JobResponse:
         return job_store.get_job(job_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Job not found") from exc
+
+
+@router.get("/compare", response_model=list[JobResponse])
+def compare_jobs(job_ids: list[str] = Query(..., min_items=2, description="Provide at least two job IDs to compare")) -> list[JobResponse]:
+    jobs: list[JobResponse] = []
+    missing: list[str] = []
+    for job_id in job_ids:
+        try:
+            jobs.append(job_store.get_job(job_id))
+        except KeyError:
+            missing.append(job_id)
+
+    if missing:
+        missing_str = ", ".join(missing)
+        raise HTTPException(status_code=404, detail=f"Job(s) not found: {missing_str}")
+
+    return jobs
 
 
 @router.get("/{job_id}/report.pdf")
