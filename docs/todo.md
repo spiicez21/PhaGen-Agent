@@ -13,10 +13,10 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - **Phase UI (Experience):** Full report workspace renders PDF/JSON export controls plus sectionized content, matching the deliverable spec.
 - **Phase UI (History):** Saved-run workspace lists molecules with status/recommendation, quick open, and PDF download actions.
 - **Phase UI (Admin):** Crawler status console and dataset/index manager expose queue metrics, robots summaries, rebuild, and purge controls.
+- **Phase 3 (Clinical worker):** ClinicalTrials agent now parses registry feeds into structured trials with phase, status, endpoints, and populations surfaced in metadata.
 
 ## 🔜 Pending
 ### Phase 3 — Worker intelligence & grounding
-- [ ] ClinicalTrials worker: parse trials (phase, status, endpoints, populations) from indexed passages.
 - [ ] Patent & Regulatory worker: surface assignees, priority dates, blocking claims, and contraindication notes.
 - [ ] Literature worker: summarize mechanism-of-action evidence and cite passages.
 - [ ] Market worker: produce market score based on incidence/prevalence proxies plus competitor context.
