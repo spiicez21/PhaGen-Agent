@@ -28,6 +28,7 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 ### Phase 4 — Aggregation & reporting
 - Evidence tabs ship with confidence badges, metadata grids, and citation links for each worker panel so reviewers can drill into sources.
 - Master agent now uses an LLM prompt that merges worker JSON into the Innovation Story and rubric-based recommendation.
+- HTML-to-PDF export path now streams backend-generated reports with frontend download hooks.
 
 ### Phase UI — Experience & admin
 - Landing hero, molecule intake, job status timeline, innovation story summary, and multi-panel evidence dashboard now reflect ~70% of the UI blueprint.
@@ -37,7 +38,6 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 
 ## 🔜 Pending
 ### Phase 4 — Aggregation & reporting
-- [ ] PDF generation flow (HTML → PDF) with evidence viewer hooks and download button in the frontend.
 - [ ] Multi-molecule comparison mode for side-by-side evidence (stretch demo goal).
 - [ ] Validation pass linking every claim in the story to evidence IDs.
 - [ ] Fallback summarizer that emits a lite summary if the LLM path fails.

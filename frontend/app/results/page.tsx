@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { EvidenceTabs } from "../components/EvidenceTabs";
-import { MARKET_METRICS, SAMPLE_PAYLOAD } from "../sample-data";
+import { DEMO_JOB, MARKET_METRICS, SAMPLE_PAYLOAD } from "../sample-data";
 
 export default function ResultsPage() {
   const workers = SAMPLE_PAYLOAD.workers;
@@ -36,7 +36,7 @@ export default function ResultsPage() {
         </div>
       </section>
 
-      <EvidenceTabs workers={workers} />
+      <EvidenceTabs workers={workers} reportJobId={DEMO_JOB.id} />
     </div>
   );
 }
