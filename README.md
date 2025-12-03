@@ -119,6 +119,17 @@ This API-first crawl honors robots.txt (see `crawler/src/robots.ts`) and caps pa
 - The innovation story is split into sentence-level claims, each linked to one or more evidence IDs; the payload exposes this under `validation` with pass/fail status plus linked counts.
 - `/comparison`, `/results`, and the PDF report highlight the validation summary so reviewers can confirm every claim is grounded before sharing deliverables.
 
+### Windows PDF prerequisites
+
+The backend now renders reports exclusively via `pdfkit` + `wkhtmltopdf`. Install the wkhtmltopdf binary once, then pip requirements are enough:
+
+1. Download the Windows installer from [wkhtmltopdf.org](https://wkhtmltopdf.org/downloads.html) and let it add itself to PATH (default: `C:\Program Files\wkhtmltopdf\bin`).
+2. If the installer couldn’t update PATH, set the `WKHTMLTOPDF_PATH` environment variable to the absolute `wkhtmltopdf.exe` location.
+3. Inside the repo venv, run `pip install -r backend/requirements.txt` (already includes `pdfkit`).
+4. Restart Uvicorn so the new PATH/variable is picked up.
+
+If PDF export fails, the backend raises a runtime error that tells you whether `pdfkit` failed to import or the wkhtmltopdf binary couldn’t be found. See the [pdfkit troubleshooting wiki](https://github.com/JazzCore/python-pdfkit/wiki/Installing-wkhtmltopdf) for additional tips.
+
 ## Comparison workspace
 
 - `/comparison` lets reviewers line up two or three molecules side-by-side with shared metrics, worker summaries, and top citations. It defaults to demo payloads but accepts real job IDs once they exist.

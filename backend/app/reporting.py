@@ -1,10 +1,31 @@
 from __future__ import annotations
 
 import json
+import os
 from typing import Any, Dict, List
 
 from jinja2 import BaseLoader, Environment, select_autoescape
-from weasyprint import HTML
+
+try:  # pragma: no cover - optional dependency
+    import pdfkit
+except Exception as exc:  # noqa: BLE001
+    pdfkit = None  # type: ignore[assignment]
+    _PDFKIT_IMPORT_ERROR: Exception | None = exc
+    _PDFKIT_CONFIG = None
+    _PDFKIT_CONFIG_ERROR: Exception | None = exc
+else:
+    _PDFKIT_IMPORT_ERROR = None
+    wkhtmltopdf_path = os.getenv("WKHTMLTOPDF_PATH")
+    try:
+        _PDFKIT_CONFIG = (
+            pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
+            if wkhtmltopdf_path
+            else pdfkit.configuration()
+        )
+        _PDFKIT_CONFIG_ERROR: Exception | None = None
+    except (OSError, IOError) as exc:  # wkhtmltopdf binary missing
+        _PDFKIT_CONFIG = None
+        _PDFKIT_CONFIG_ERROR = exc
 
 from .schemas import JobResponse
 
@@ -196,35 +217,35 @@ def _format_evidence(evidence: List[Dict[str, Any]]) -> List[Dict[str, str]]:
     entries: List[Dict[str, str]] = []
     for record in (evidence or [])[:5]:
         entries.append(
-          {
-            "type": record.get("type", "Evidence"),
-            "text": _truncate(record.get("text", "")),
-            "url": record.get("url", ""),
-            "evidence_id": record.get("evidence_id", ""),
-          }
+            {
+                "type": record.get("type", "Evidence"),
+                "text": _truncate(record.get("text", "")),
+                "url": record.get("url", ""),
+                "evidence_id": record.get("evidence_id", ""),
+            }
         )
     return entries
 
 
-    def _format_claim_links(validation: Dict[str, Any]) -> Dict[str, Any] | None:
-      if not validation:
+def _format_claim_links(validation: Dict[str, Any]) -> Dict[str, Any] | None:
+    if not validation:
         return None
-      claims = []
-      for claim in validation.get("claim_links", []):
+    claims = []
+    for claim in validation.get("claim_links", []):
         evidence_ids = claim.get("evidence_ids") or []
         label = ", ".join(evidence_ids) if evidence_ids else "Not linked"
         claims.append(
-          {
-            "claim_text": _truncate(claim.get("claim_text", ""), 320),
-            "evidence_label": label,
-          }
+            {
+                "claim_text": _truncate(claim.get("claim_text", ""), 320),
+                "evidence_label": label,
+            }
         )
-      return {
+    return {
         "status_label": (validation.get("status") or "Needs review").replace("_", " ").title(),
         "claims_total": validation.get("claims_total", 0),
         "claims_linked": validation.get("claims_linked", 0),
         "claims": claims,
-      }
+    }
 
 
 def _build_context(job: JobResponse) -> Dict[str, object]:
@@ -236,16 +257,16 @@ def _build_context(job: JobResponse) -> Dict[str, object]:
         metadata = data.get("metadata") or {}
         evidence = data.get("evidence") or []
         workers.append(
-          {
-            "name": name.title(),
-            "summary": data.get("summary", ""),
-            "confidence_band": _BAND_LABELS.get(
-              (data.get("confidence_band") or "low").lower(),
-              "Confidence",
-            ),
-            "metadata": _format_metadata(metadata),
-            "evidence": _format_evidence(evidence),
-          }
+            {
+                "name": name.title(),
+                "summary": data.get("summary", ""),
+                "confidence_band": _BAND_LABELS.get(
+                    (data.get("confidence_band") or "low").lower(),
+                    "Confidence",
+                ),
+                "metadata": _format_metadata(metadata),
+                "evidence": _format_evidence(evidence),
+            }
         )
     workers.sort(key=lambda item: item["name"])
 
@@ -269,7 +290,7 @@ def _build_context(job: JobResponse) -> Dict[str, object]:
         "recommendation": recommendation,
         "market_score": market_score,
         "worker_sections": workers,
-      "validation": validation_block,
+        "validation": validation_block,
     }
 
 
@@ -280,5 +301,18 @@ def render_report_html(job: JobResponse) -> str:
 
 def generate_report_pdf(job: JobResponse) -> bytes:
     html = render_report_html(job)
-    pdf = HTML(string=html, base_url=".")
-    return pdf.write_pdf()
+
+    if pdfkit and _PDFKIT_CONFIG:
+        try:
+            return pdfkit.from_string(html, False, configuration=_PDFKIT_CONFIG)
+        except (OSError, IOError) as exc:  # noqa: BLE001
+            raise RuntimeError(
+                "wkhtmltopdf failed to generate a PDF. Ensure the wkhtmltopdf binary is installed "
+                "and accessible (set WKHTMLTOPDF_PATH if it's not on PATH)."
+            ) from exc
+
+    raise RuntimeError(
+        "wkhtmltopdf is not configured. Install wkhtmltopdf from https://wkhtmltopdf.org/downloads.html "
+        "and ensure pdfkit can locate it (add to PATH or set WKHTMLTOPDF_PATH). "
+        f"pdfkit import error: {_PDFKIT_IMPORT_ERROR}; configuration error: {_PDFKIT_CONFIG_ERROR}"
+    )
