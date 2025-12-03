@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import json
 import logging
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
 from dataclasses import asdict
 from typing import Dict
 
-from .llm import LLMClient
+from .llm import LLMClient, LLMClientError, format_structured_context
 from .models import (
     MasterResult,
     MasterRun,
@@ -98,8 +99,15 @@ class MasterAgent:
         market_score = int(
             float(worker_outputs["market"].metadata.get("market_score", "70"))
         )
-        recommendation = self._recommend(market_score, worker_outputs)
-        innovation_story = self._synthesize_story(molecule, worker_outputs)
+        fallback_story = self._fallback_story(molecule, worker_outputs)
+        fallback_recommendation = self._recommend(market_score, worker_outputs)
+        innovation_story, recommendation = self._synthesize_story_and_recommendation(
+            molecule,
+            worker_outputs,
+            market_score,
+            fallback_story,
+            fallback_recommendation,
+        )
         return MasterRun(
             success=True,
             output=MasterResult(
@@ -122,7 +130,7 @@ class MasterAgent:
             return Recommendation.investigate
         return Recommendation.no_go
 
-    def _synthesize_story(
+    def _fallback_story(
         self, molecule: str, worker_outputs: Dict[str, WorkerResult]
     ) -> str:
         clinical = worker_outputs["clinical"].summary
@@ -134,6 +142,101 @@ class MasterAgent:
             f"Patent view: {patent}. Literature review: {literature}. "
             f"Market stance: {market}."
         )
+
+    def _synthesize_story_and_recommendation(
+        self,
+        molecule: str,
+        worker_outputs: Dict[str, WorkerResult],
+        market_score: int,
+        fallback_story: str,
+        fallback_recommendation: Recommendation,
+    ) -> tuple[str, Recommendation]:
+        if not self.llm:
+            return fallback_story, fallback_recommendation
+        payload = {
+            "molecule": molecule,
+            "market_score": market_score,
+            "workers": self._build_worker_payload(worker_outputs),
+        }
+        rubric = (
+            "Go: compelling clinical efficacy, manageable risk, clear TAM; "
+            "Investigate: mixed or emerging signals requiring validation; "
+            "No-Go: weak efficacy, blocking IP/regulatory risk, or limited market."  # noqa: E501
+        )
+        user_prompt = (
+            "You are the final reviewer who writes the Innovation Story and rubric-based recommendation.\n"
+            "Context:\n"
+            f"{format_structured_context(payload)}\n\n"
+            "Respond as minified JSON with keys innovation_story, recommendation, rationale."
+            " Recommendation must be one of Go, Investigate, No-Go per rubric: "
+            f"{rubric}"
+        )
+        try:
+            raw = self.llm.generate(
+                prompt=user_prompt,
+                system_prompt=
+                "Synthesize cross-domain biotech diligence into a crisp Innovation Story and rubric-based recommendation.",
+                temperature=0.2,
+                max_tokens=400,
+            )
+            parsed = self._parse_master_response(raw)
+        except (LLMClientError, ValueError) as exc:  # pragma: no cover - runtime
+            self._logger.warning("Master synthesis fallback: %s", exc)
+            return fallback_story, fallback_recommendation
+
+        story = parsed.get("innovation_story") or fallback_story
+        recommendation = self._resolve_recommendation(
+            parsed.get("recommendation"),
+            fallback_recommendation,
+        )
+        return story, recommendation
+
+    def _build_worker_payload(
+        self, worker_outputs: Dict[str, WorkerResult]
+    ) -> Dict[str, dict]:
+        payload: Dict[str, dict] = {}
+        for name, result in worker_outputs.items():
+            payload[name] = {
+                "summary": result.summary,
+                "confidence": round(result.confidence, 3),
+                "confidence_band": result.confidence_band,
+                "metadata": result.metadata,
+                "evidence": [
+                    {
+                        "type": item.type,
+                        "confidence": round(item.confidence, 3),
+                        "text": (item.text or "")[:280],
+                        "url": item.url,
+                    }
+                    for item in result.evidence[:3]
+                ],
+            }
+        return payload
+
+    def _parse_master_response(self, raw: str) -> dict:
+        snippet = raw.strip()
+        start = snippet.find("{")
+        end = snippet.rfind("}")
+        if start == -1 or end == -1 or end <= start:
+            raise ValueError("Master synthesis did not return JSON")
+        json_blob = snippet[start : end + 1]
+        return json.loads(json_blob)
+
+    def _resolve_recommendation(
+        self,
+        label: str | None,
+        fallback: Recommendation,
+    ) -> Recommendation:
+        if not label:
+            return fallback
+        normalized = label.strip().lower()
+        mapping = {
+            "go": Recommendation.go,
+            "investigate": Recommendation.investigate,
+            "no-go": Recommendation.no_go,
+            "no go": Recommendation.no_go,
+        }
+        return mapping.get(normalized, fallback)
 
     def serialize(self, result: MasterResult) -> dict:
         return asdict(result)
