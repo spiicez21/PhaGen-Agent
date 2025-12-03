@@ -9,6 +9,10 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - **Phase 2 (Indexer):** Python Chroma/FAISS pipeline (`indexes/build_index.py`) now ingests crawler output inside the shared `.venv` and persists embeddings to `indexes/chroma/`.
 - **Phase 2 (Retriever):** Agents call a real Chroma-backed retriever with per-worker context budgeting instead of the previous mock snippets.
 - **Phase UI (Core screens):** Landing hero, molecule intake, job status timeline, innovation story summary, and multi-panel evidence dashboard now reflect ~70% of the UI blueprint.
+- **Phase 4 (Evidence UI polish):** Evidence tabs ship with confidence badges, metadata grids, and citation links for each worker panel so reviewers can drill into sources.
+- **Phase UI (Experience):** Full report workspace renders PDF/JSON export controls plus sectionized content, matching the deliverable spec.
+- **Phase UI (History):** Saved-run workspace lists molecules with status/recommendation, quick open, and PDF download actions.
+- **Phase UI (Admin):** Crawler status console and dataset/index manager expose queue metrics, robots summaries, rebuild, and purge controls.
 
 ## 🔜 Pending
 ### Phase 3 — Worker intelligence & grounding
@@ -21,12 +25,8 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 ### Phase 4 — Aggregation & reporting
 - [ ] Master agent final synthesis prompt that merges worker JSON into the "Innovation Story" + recommendation rubric.
 - [ ] PDF generation flow (HTML → PDF) with evidence viewer hooks and download button in the frontend.
-- [ ] Evidence dashboard polish: tabs per worker, confidence badges, citation links back to sources.
 
 ### Phase UI — Experience & admin
-- [ ] Add Full Report viewer (PDF/HTML) with download/share/export controls.
-- [ ] Build history/saved runs workspace with filters + download actions.
-- [ ] Create crawler status dashboard and dataset/index manager for admins.
 - [ ] Implement stretch visualizations (knowledge graph, citation trace, molecule comparison) after MVP.
 
 ### Data & infra follow-ups
