@@ -10,8 +10,8 @@ from .base import Worker
 
 
 class PatentWorker(Worker):
-    def __init__(self, retriever):
-        super().__init__("patent", retriever)
+    def __init__(self, retriever, llm=None):
+        super().__init__("patent", retriever, llm)
 
     def run(self, request: WorkerRequest) -> WorkerResult:
         primary = self.retriever.search(
@@ -31,7 +31,20 @@ class PatentWorker(Worker):
     def build_summary(self, request: WorkerRequest, passages: List[dict]) -> WorkerResult:
         patents = self._extract_patents(passages)
         guardrails = self._extract_regulatory(passages)
-        summary = self._summarize(request.molecule, patents, guardrails)
+        fallback_summary = self._summarize(request.molecule, patents, guardrails)
+        summary = self._summarize_with_llm(
+            request,
+            instructions=
+            "Assess freedom-to-operate risk, priority dates, and any regulatory guardrails or contraindications.",
+            passages=passages,
+            extra_context={
+                "patents": patents,
+                "regulatory_notes": guardrails,
+            }
+            if patents or guardrails
+            else None,
+            fallback=fallback_summary,
+        )
         return WorkerResult(
             summary=summary,
             evidence=self._to_evidence(passages, "patent"),

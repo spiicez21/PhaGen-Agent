@@ -9,12 +9,20 @@ from .base import Worker
 
 
 class ClinicalWorker(Worker):
-    def __init__(self, retriever):
-        super().__init__("clinical", retriever)
+    def __init__(self, retriever, llm=None):
+        super().__init__("clinical", retriever, llm)
 
     def build_summary(self, request: WorkerRequest, passages: List[dict]) -> WorkerResult:
         trials = self._extract_trials(passages)
-        summary = self._summarize_trials(request.molecule, trials)
+        fallback_summary = self._summarize_trials(request.molecule, trials)
+        summary = self._summarize_with_llm(
+            request,
+            instructions=
+            "Highlight trial phases, statuses, endpoints, and population insights relevant to clinical readiness.",
+            passages=passages,
+            extra_context={"trials": trials} if trials else None,
+            fallback=fallback_summary,
+        )
         return WorkerResult(
             summary=summary,
             evidence=self._to_evidence(passages, "clinical"),

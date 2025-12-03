@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Dict
 
+from .llm import LLMClient
 from .models import (
     MasterResult,
     MasterRun,
@@ -19,14 +20,20 @@ from .workers.market import MarketWorker
 
 
 class MasterAgent:
-    def __init__(self, top_k: int = 5, context_tokens: int = 1200) -> None:
+    def __init__(
+        self,
+        top_k: int = 5,
+        context_tokens: int = 1200,
+        llm_client: LLMClient | None = None,
+    ) -> None:
         retriever = Retriever(top_k=top_k, context_tokens=context_tokens)
         self.context_tokens = context_tokens
+        self.llm = llm_client or LLMClient()
         self.workers = {
-            "clinical": ClinicalWorker(retriever),
-            "patent": PatentWorker(retriever),
-            "literature": LiteratureWorker(retriever),
-            "market": MarketWorker(retriever),
+            "clinical": ClinicalWorker(retriever, self.llm),
+            "patent": PatentWorker(retriever, self.llm),
+            "literature": LiteratureWorker(retriever, self.llm),
+            "market": MarketWorker(retriever, self.llm),
         }
 
     def run(self, molecule: str, synonyms: list[str] | None = None) -> MasterRun:
