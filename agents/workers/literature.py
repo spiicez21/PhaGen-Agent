@@ -8,16 +8,28 @@ from .base import Worker
 
 
 class LiteratureWorker(Worker):
-    def __init__(self, retriever):
-        super().__init__("literature", retriever)
+    def __init__(self, retriever, llm=None):
+        super().__init__("literature", retriever, llm)
 
     def build_summary(self, request: WorkerRequest, passages: List[dict]) -> WorkerResult:
         articles = self._extract_articles(passages)
-        summary = self._summarize(request.molecule, articles)
+        fallback_summary = self._summarize(request.molecule, articles)
+        summary = self._summarize_with_llm(
+            request,
+            instructions=
+            "Summarize mechanism-of-action, preclinical/clinical findings, and safety notes from the literature evidence.",
+            passages=passages,
+            extra_context={"articles": articles} if articles else None,
+            fallback=fallback_summary,
+        )
+        confidence, confidence_band = self._calibrate_confidence(
+            self._score_confidence(articles)
+        )
         return WorkerResult(
             summary=summary,
             evidence=self._build_evidence(articles, passages),
-            confidence=self._score_confidence(articles),
+            confidence=confidence,
+            confidence_band=confidence_band,
             metadata=self._build_metadata(articles),
         )
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { WorkerKind, WorkerResultPayload } from "../types";
 
 const PANEL_META: Record<WorkerKind, { label: string; description: string; empty: string }> = {
@@ -45,7 +45,10 @@ const formatMetadataValue = (value: string): string => {
   return value;
 };
 
-const confidenceLabel = (score?: number) => {
+const confidenceLabel = (band?: WorkerResultPayload["confidence_band"], score?: number) => {
+  if (band === "high") return "High confidence";
+  if (band === "medium") return "Moderate confidence";
+  if (band === "low") return "Signal needs validation";
   if (score === undefined) return "";
   if (score >= 0.8) return "High confidence";
   if (score >= 0.6) return "Moderate confidence";
@@ -59,15 +62,12 @@ export const EvidenceTabs = ({ workers = {} }: EvidenceTabsProps) => {
     [workerKeys, workers]
   );
   const [active, setActive] = useState<WorkerKind>(available[0] ?? "clinical");
+  const resolvedActive: WorkerKind = available.includes(active)
+    ? active
+    : (available[0] ?? "clinical");
 
-  useEffect(() => {
-    if (available.length && !available.includes(active)) {
-      setActive(available[0]);
-    }
-  }, [active, available]);
-
-  const meta = PANEL_META[active];
-  const worker = workers[active];
+  const meta = PANEL_META[resolvedActive];
+  const worker = workers[resolvedActive];
 
   return (
     <section className="panel" aria-labelledby="evidence-heading">
@@ -82,8 +82,8 @@ export const EvidenceTabs = ({ workers = {} }: EvidenceTabsProps) => {
             <button
               key={key}
               type="button"
-              className={`tab ${active === key ? "tab--active" : ""}`}
-              aria-pressed={active === key}
+              className={`tab ${resolvedActive === key ? "tab--active" : ""}`}
+              aria-pressed={resolvedActive === key}
               onClick={() => setActive(key)}
             >
               {PANEL_META[key].label}
@@ -102,7 +102,9 @@ export const EvidenceTabs = ({ workers = {} }: EvidenceTabsProps) => {
           <div className="summary-card">
             <p className="eyebrow">Worker summary</p>
             <p className="summary-card__text">{worker.summary}</p>
-            <p className="summary-card__confidence">{confidenceLabel(worker.confidence)}</p>
+            <p className="summary-card__confidence">
+              {confidenceLabel(worker.confidence_band, worker.confidence)}
+            </p>
             {Object.keys(worker.metadata ?? {}).length > 0 && (
               <dl className="metadata-grid">
                 {Object.entries(worker.metadata).map(([key, value]) => (
@@ -117,7 +119,7 @@ export const EvidenceTabs = ({ workers = {} }: EvidenceTabsProps) => {
           <div className="evidence-stack">
             {worker.evidence?.length ? (
               worker.evidence.map((item, idx) => (
-                <article key={`${active}-${idx}`} className="evidence-card">
+                <article key={`${resolvedActive}-${idx}`} className="evidence-card">
                   <header>
                     <span className="badge">{item.type}</span>
                     <span className="confidence-pill">{Math.round(item.confidence * 100)}% confidence</span>

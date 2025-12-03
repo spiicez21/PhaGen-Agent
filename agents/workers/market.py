@@ -8,17 +8,29 @@ from .base import Worker
 
 
 class MarketWorker(Worker):
-    def __init__(self, retriever):
-        super().__init__("market", retriever)
+    def __init__(self, retriever, llm=None):
+        super().__init__("market", retriever, llm)
 
     def build_summary(self, request: WorkerRequest, passages: List[dict]) -> WorkerResult:
         market_data = self._extract_market(passages)
         score = self._calculate_score(market_data)
-        summary = self._summarize(request.molecule, market_data, score)
+        fallback_summary = self._summarize(request.molecule, market_data, score)
+        summary = self._summarize_with_llm(
+            request,
+            instructions=
+            "Quantify TAM/incidence, highlight growth signals, and describe competitive intensity to justify a market score.",
+            passages=passages,
+            extra_context={"market": market_data, "score": score} if market_data else {"score": score},
+            fallback=fallback_summary,
+        )
+        confidence, confidence_band = self._calibrate_confidence(
+            self._score_confidence(market_data)
+        )
         return WorkerResult(
             summary=summary,
             evidence=self._to_evidence(passages, "market"),
-            confidence=self._score_confidence(market_data),
+            confidence=confidence,
+            confidence_band=confidence_band,
             metadata=self._build_metadata(market_data, score),
         )
 

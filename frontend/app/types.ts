@@ -11,6 +11,7 @@ export interface WorkerResultPayload {
   summary: string;
   evidence: WorkerEvidence[];
   confidence: number;
+  confidence_band: "low" | "medium" | "high";
   metadata: Record<string, string>;
 }
 

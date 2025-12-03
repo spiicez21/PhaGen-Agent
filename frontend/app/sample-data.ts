@@ -25,6 +25,7 @@ export const SAMPLE_PAYLOAD: MasterPayload = {
       summary:
         "Phase 2b study NCT01907900 slowed FVC decline by ~45 mL vs placebo over 24 weeks; benefit also seen in registry patients failing nintedanib.",
       confidence: 0.78,
+      confidence_band: "high",
       evidence: [
         {
           type: "Trial",
@@ -47,6 +48,7 @@ export const SAMPLE_PAYLOAD: MasterPayload = {
     literature: {
       summary: "Multiple PMC articles describe TGF-beta modulation and anti-inflammatory properties supporting use beyond IPF.",
       confidence: 0.74,
+      confidence_band: "medium",
       evidence: [
         {
           type: "Mechanism",
@@ -62,6 +64,7 @@ export const SAMPLE_PAYLOAD: MasterPayload = {
     patent: {
       summary: "Key Genentech filings on pirfenidone combinations expire 2028-2030; no blocking claims on PF-ILD indication found.",
       confidence: 0.63,
+      confidence_band: "medium",
       evidence: [
         {
           type: "Patent",
@@ -78,6 +81,7 @@ export const SAMPLE_PAYLOAD: MasterPayload = {
     market: {
       summary: "~120k PF-ILD patients across US/EU with limited options; opportunity >$1.4B with modest uptake from pulmonologists.",
       confidence: 0.69,
+      confidence_band: "medium",
       evidence: [
         {
           type: "Market",
