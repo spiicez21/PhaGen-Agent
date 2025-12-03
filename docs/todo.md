@@ -18,6 +18,7 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - ClinicalTrials agent now parses registry feeds into structured trials with phase, status, endpoints, and populations surfaced in metadata.
 - Patent agent now surfaces assignees, priority dates, blocking claim summaries, and FDA contraindication notes directly from retrieved passages.
 - Literature worker now summarizes mechanism-of-action evidence, cites DOI-backed passages, and exposes structured metadata for the dashboard.
+- Market worker now synthesizes TAM/incidence/competition context into a scored summary with structured metadata for the dashboard.
 
 ### Phase 4 — Aggregation & reporting
 - Evidence tabs ship with confidence badges, metadata grids, and citation links for each worker panel so reviewers can drill into sources.
@@ -30,7 +31,6 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 
 ## 🔜 Pending
 ### Phase 3 — Worker intelligence & grounding
-- [ ] Market worker: produce market score based on incidence/prevalence proxies plus competitor context.
 - [ ] Integrate chosen LLM runtime (Ollama Gemma2:2B or remote) with the worker prompts and retriever output.
 - [ ] Synonym expansion worker: convert SMILES → canonical name → synonyms/aliases for better retrieval.
 - [ ] Source-ranking scorecard: prioritize clinical > regulatory > literature > patent passages when grounding workers.
