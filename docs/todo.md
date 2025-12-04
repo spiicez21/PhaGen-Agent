@@ -58,7 +58,6 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - [ ] Add "Request structure" action in molecule intake to create SMILES → RDKit render.
 
 ### Data & infra follow-ups
-- [ ] Add MinIO/S3 storage wiring for raw documents and PDF artifacts.
 - [ ] Extend crawler normalization (chunking, boilerplate stripping, PII redaction) per Section 5 guidance.
 - [ ] Index snapshotting cadence (daily/monthly builds) for reproducibility.
 - [ ] Embedding cache to avoid re-embedding unchanged passages.
