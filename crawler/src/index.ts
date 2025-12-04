@@ -1,6 +1,7 @@
 import fetch from "node-fetch";
 import { readFile } from "node:fs/promises";
 
+import { normalizeHtmlDocument } from "./normalize.ts";
 import { checkRobots } from "./robots.ts";
 
 const { Dataset } = await import("@crawlee/basic");
@@ -88,14 +89,42 @@ for (const task of SOURCES) {
     continue;
   }
   const html = await response.text();
-  await Dataset.pushData({
-    id: task.id,
-    via: "html",
-    url: task.crawlUrl,
-    source_type: task.source_type,
-    snippet: html.slice(0, SNIPPET_LIMIT),
-  });
-  console.log(`Crawled ${task.crawlUrl}`);
+  const normalized = normalizeHtmlDocument(html);
+
+  if (!normalized.chunks.length) {
+    await Dataset.pushData({
+      id: task.id,
+      via: "html",
+      url: task.crawlUrl,
+      source_type: task.source_type,
+      snippet: html.slice(0, SNIPPET_LIMIT),
+      normalization: {
+        chunked: false,
+        reason: "empty-content",
+      },
+    });
+    console.log(`Crawled ${task.crawlUrl} (normalization fallback)`);
+    continue;
+  }
+
+  for (const chunk of normalized.chunks) {
+    await Dataset.pushData({
+      id: `${task.id}#${String(chunk.chunkIndex + 1).padStart(3, "0")}`,
+      via: "html",
+      url: task.crawlUrl,
+      source_type: task.source_type,
+      chunk_index: chunk.chunkIndex,
+      chunk_count: normalized.chunks.length,
+      char_count: chunk.charCount,
+      word_count: chunk.wordCount,
+      text: chunk.text,
+      redactions: normalized.redactions,
+    });
+  }
+
+  console.log(
+    `Crawled ${task.crawlUrl} → ${normalized.chunks.length} normalized chunks (emails redacted: ${normalized.redactions.emails}, phones redacted: ${normalized.redactions.phones})`,
+  );
 }
 
 console.log("Ingestion finished with API-first + robots fallback");

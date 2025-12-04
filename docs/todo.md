@@ -46,6 +46,7 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 ### Data & infra follow-ups
 - Postgres schema now covers `molecules`, `jobs`, `documents`, `passages`, and `reports`, and the FastAPI backend persists jobs plus evidence into the database via SQLAlchemy models.
 - MinIO/S3 wiring now stores raw job payloads and generated PDF artifacts via the new object storage client, with configurable buckets and docker-compose defaults.
+- Crawlee normalization pipeline now strips boilerplate, redacts PII, and chunks sources into metadata-rich passages per Section 5 guidance, feeding indexes with deterministic chunk IDs + redaction stats.
 
 ## 🔜 Pending
 ### Phase UI — Experience & admin
@@ -58,7 +59,6 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - [ ] Add "Request structure" action in molecule intake to create SMILES → RDKit render.
 
 ### Data & infra follow-ups
-- [ ] Extend crawler normalization (chunking, boilerplate stripping, PII redaction) per Section 5 guidance.
 - [ ] Index snapshotting cadence (daily/monthly builds) for reproducibility.
 - [ ] Embedding cache to avoid re-embedding unchanged passages.
 - [ ] Domain-level crawl budgets to limit pages per source.

@@ -28,6 +28,7 @@
 4. **Crawler**
    - Crawlee TypeScript job for harvesting seed datasets.
    - Pushes normalized docs to dataset or disk for indexing.
+   - Section 5 normalization path strips boilerplate, redacts light PII, and chunks sources into metadata-rich passages before indexing.
 
 5. **Infra**
    - Docker Compose (coming soon) wires Postgres, MinIO, Ollama, backend, and frontend.

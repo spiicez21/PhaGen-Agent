@@ -9,7 +9,7 @@ PhaGen Agentic is a hackathon-ready, agentic multi-worker platform that compress
 | Frontend | Basic Next.js scaffold with molecule input and job timeline placeholder |
 | Backend | FastAPI service with job orchestration endpoints backed by Postgres persistence |
 | Agents | Master agent plus four worker stubs wired to deterministic mock data and RAG hooks |
-| Crawler | Crawlee TypeScript project with seed list + document normalization utilities |
+| Crawler | Crawlee TypeScript project with seed list plus Section 5 normalization (boilerplate stripping, PII redaction, chunk metadata) |
 | Infra | Docker Compose file for local stack (Postgres, MinIO, Ollama, services) |
 
 The MVP mirrors the implementation plan in `ignore.md`. Build phases are mapped to repo folders so each team can work in parallel.
@@ -188,5 +188,6 @@ If PDF export fails, the backend raises a runtime error that tells you whether `
 ## Crawling & compliance
 
 - The crawler now follows an **API-first → robots.txt-validated crawl** pipeline. Each source tries to load mock API data first (`crawler/mock-data/`), then falls back to HTML only if `robots.txt` allows access.
+- Section 5 normalization now strips boilerplate, redacts simple PII, and emits deterministic chunk metadata (chunk ID, char spans, redaction counters) via `crawler/src/normalize.ts` before datasets reach the indexer.
 - `crawler/src/robots.ts` caches per-domain policies (allow/deny + crawl-delay) using the `PhaGenBot/1.0` user agent. Update the user agent or contact email there before running against live sites.
 - Crawled artifacts are written to `crawler/storage/` (ignored by git) and capped at 5 KB snippets for safety. Extend the schema before indexing into FAISS/Chroma.
