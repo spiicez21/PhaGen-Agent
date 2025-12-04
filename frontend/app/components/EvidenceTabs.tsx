@@ -144,6 +144,9 @@ export const EvidenceTabs = ({ workers = {}, reportJobId }: EvidenceTabsProps) =
                       View source ↗
                     </a>
                   )}
+                  {item.evidence_id && (
+                    <p className="subtle-text">Evidence ID · {item.evidence_id}</p>
+                  )}
                 </article>
               ))
             ) : (

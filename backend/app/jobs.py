@@ -11,6 +11,7 @@ class InMemoryJobStore:
     def __init__(self, ttl_minutes: int = 60) -> None:
         self._jobs: Dict[str, JobResponse] = {}
         self._ttl = timedelta(minutes=ttl_minutes)
+        self._version_index: Dict[str, int] = {}
 
     def create_job(self, payload: JobCreateRequest) -> JobResponse:
         now = datetime.utcnow()
@@ -21,6 +22,7 @@ class InMemoryJobStore:
             updated_at=now,
             payload=None,
             recommendation=None,
+            report_version=None,
         )
         self._jobs[job.job_id] = job
         return job
@@ -32,6 +34,16 @@ class InMemoryJobStore:
         job.updated_at = datetime.utcnow()
         self._jobs[job_id] = job
         return job
+
+    def assign_report_version(self, job_id: str, molecule: str | None) -> int:
+        key = (molecule or "").strip().lower() or "__unlabeled__"
+        next_version = self._version_index.get(key, 0) + 1
+        self._version_index[key] = next_version
+        job = self._jobs[job_id]
+        job.report_version = next_version
+        job.updated_at = datetime.utcnow()
+        self._jobs[job_id] = job
+        return next_version
 
     def get_job(self, job_id: str) -> JobResponse:
         return self._jobs[job_id]

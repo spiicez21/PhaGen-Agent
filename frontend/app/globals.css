@@ -280,6 +280,97 @@ body {
 	font-size: 0.85rem;
 }
 
+.comparison-grid {
+	display: grid;
+	gap: 1.5rem;
+	grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.comparison-metrics {
+	display: grid;
+	gap: 1rem;
+	grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.comparison-workers {
+	display: grid;
+	gap: 1rem;
+}
+
+.comparison-worker {
+	border: 1px solid var(--border);
+	border-radius: 0.85rem;
+	padding: 1rem;
+	background: var(--surface-muted);
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.comparison-worker__header {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.comparison-worker__summary {
+	font-size: 0.9rem;
+}
+
+.comparison-worker__evidence {
+	font-size: 0.8rem;
+	color: var(--text-secondary);
+}
+
+.validation-chip {
+	border-radius: 0.75rem;
+	padding: 0.15rem 0.75rem;
+	font-size: 0.75rem;
+	border: 1px solid var(--border);
+}
+
+.validation-chip--pass {
+	color: #6ef2c2;
+	border-color: #1f8f6d;
+}
+
+.validation-chip--needs_review {
+	color: #ffd590;
+	border-color: #8f6a1f;
+}
+
+.validation-claims {
+	display: grid;
+	gap: 0.75rem;
+}
+
+.validation-claim {
+	border: 1px solid var(--border);
+	border-radius: 0.85rem;
+	padding: 1rem;
+	background: var(--surface-muted);
+}
+
+.comparison-form {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.comparison-form__fields {
+	display: grid;
+	gap: 1rem;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.comparison-form__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+}
+
 .evidence-layout {
 	display: grid;
 	gap: 1.25rem;

@@ -33,6 +33,7 @@ export default function RootLayout({
               <Link href="/molecule">Molecule Search</Link>
               <Link href="/job">Job Status</Link>
               <Link href="/results">Results</Link>
+              <Link href="/comparison">Comparison</Link>
               <Link href="/evidence/clinical">Evidence</Link>
               <Link href="/reports">Reports</Link>
               <Link href="/history">History</Link>

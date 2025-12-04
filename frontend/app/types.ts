@@ -5,6 +5,7 @@ export interface WorkerEvidence {
   text: string;
   url: string;
   confidence: number;
+  evidence_id?: string;
 }
 
 export interface WorkerResultPayload {
@@ -15,11 +16,28 @@ export interface WorkerResultPayload {
   metadata: Record<string, string>;
 }
 
+export interface StoryClaimLink {
+  claim_id: string;
+  claim_text: string;
+  worker: string;
+  evidence_ids: string[];
+  status: "linked" | "missing";
+}
+
+export interface ValidationSummary {
+  status: "pass" | "needs_review";
+  claims_total: number;
+  claims_linked: number;
+  claim_links: StoryClaimLink[];
+}
+
 export interface MasterPayload {
   innovation_story: string;
   recommendation: string;
   market_score: number;
   workers: Record<string, WorkerResultPayload>;
+  validation?: ValidationSummary;
+  report_version?: number;
 }
 
 export type TimelineStatus = "pending" | "running" | "completed" | "failed";
@@ -113,4 +131,23 @@ export interface IndexVersion {
 export interface ReportSection {
   title: string;
   body: string;
+}
+
+export type MasterPayloadWithMeta = MasterPayload & { molecule?: string };
+
+export interface ComparisonSlot {
+  jobId: string;
+  molecule: string;
+  lastUpdated: string;
+  payload: MasterPayload;
+}
+
+export interface JobApiResponse {
+  job_id: string;
+  status: JobStatus;
+  created_at: string;
+  updated_at: string;
+  payload?: MasterPayloadWithMeta;
+  recommendation?: string;
+  report_version?: number;
 }

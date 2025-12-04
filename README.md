@@ -81,7 +81,7 @@ The repo-level `requirements.txt` simply pulls in `backend/requirements.txt` and
 
 Each piece lives in its own directory but shares the same repo:
 
-- **Frontend (`frontend/`)** renders the molecule intake, job history, evidence tabs, and the new report workspace with inline PDF/JSON export hooks.
+- **Frontend (`frontend/`)** renders the molecule intake, job history, evidence tabs, the multi-molecule comparison workspace, and the report view with inline PDF/JSON export hooks.
 - **Backend (`backend/`)** exposes `/api/jobs` for orchestration plus `/api/jobs/{id}/report.pdf` for HTML→PDF exports. Background tasks fan out to the agents package.
 - **Agents (`agents/`)** contain `MasterAgent`, shared `LLMClient`, synonym expansion, and four specialized workers. A structured payload powers both the UI and PDF renderer.
 - **Indexes (`indexes/`)** bundle the Chroma/FAISS build script so every crawl refresh can be re-indexed with one command.
@@ -96,7 +96,8 @@ See `docs/architecture.md` for the full sequence diagram and responsibilities pe
 2. **Job runner** – FastAPI enqueues the request, spawns a background task, expands synonyms, and parameters for each worker.
 3. **Retrieval/RAG** – workers query Chroma via the shared retriever, apply source-ranking, and summarize passages via the shared LLM runtime (Ollama by default, OpenAI optional).
 4. **Aggregation** – `MasterAgent` merges worker JSON, runs the Phase 4 synthesis prompt, and persists the innovation story + rubric-based recommendation into the job store.
-5. **Reporting** – the frontend polls `/api/jobs/{id}` until complete; the same payload fuels the Evidence tabs, PDF export (`/api/jobs/{id}/report.pdf`), and JSON download button in `/reports`.
+   - If the LLM synthesis path is unavailable, the master agent now emits a deterministic "lite" summary that strings together worker highlights so downstream UIs/PDFs still render.
+5. **Reporting** – the frontend polls `/api/jobs/{id}` until complete; the same payload fuels the Evidence tabs, PDF export (`/api/jobs/{id}/report.pdf`), and JSON download button in `/reports`. Each molecule now accrues monotonic report versions (V1, V2, …) so auditors can track which snapshot was shared.
 
 ## Data & indexing pipeline
 
@@ -112,6 +113,29 @@ This API-first crawl honors robots.txt (see `crawler/src/robots.ts`) and caps pa
 - **HTML→PDF**: the backend renders a Jinja2 template with WeasyPrint (`backend/app/reporting.py`). Frontend buttons and Evidence tabs now call the `/api/jobs/{id}/report.pdf` endpoint directly.
 - **JSON download**: `/reports` includes a job ID field that serializes the entire job payload for offline analysis or audit trails.
 - **Evidence viewer hooks**: every worker summary references the same `WorkerResult` payload so UI badges, PDF sections, and downstream BI exports stay in sync.
+
+## Validation & traceability
+
+- Every evidence snippet now receives a deterministic ID (e.g., `clinical-1`) when the master agent serializes results.
+- The innovation story is split into sentence-level claims, each linked to one or more evidence IDs; the payload exposes this under `validation` with pass/fail status plus linked counts.
+- `/comparison`, `/results`, and the PDF report highlight the validation summary so reviewers can confirm every claim is grounded before sharing deliverables.
+
+### Windows PDF prerequisites
+
+The backend now renders reports exclusively via `pdfkit` + `wkhtmltopdf`. Install the wkhtmltopdf binary once, then pip requirements are enough:
+
+1. Download the Windows installer from [wkhtmltopdf.org](https://wkhtmltopdf.org/downloads.html) and let it add itself to PATH (default: `C:\Program Files\wkhtmltopdf\bin`).
+2. If the installer couldn’t update PATH, set the `WKHTMLTOPDF_PATH` environment variable to the absolute `wkhtmltopdf.exe` location.
+3. Inside the repo venv, run `pip install -r backend/requirements.txt` (already includes `pdfkit`).
+4. Restart Uvicorn so the new PATH/variable is picked up.
+
+If PDF export fails, the backend raises a runtime error that tells you whether `pdfkit` failed to import or the wkhtmltopdf binary couldn’t be found. See the [pdfkit troubleshooting wiki](https://github.com/JazzCore/python-pdfkit/wiki/Installing-wkhtmltopdf) for additional tips.
+
+## Comparison workspace
+
+- `/comparison` lets reviewers line up two or three molecules side-by-side with shared metrics, worker summaries, and top citations. It defaults to demo payloads but accepts real job IDs once they exist.
+- The frontend form hits the new `/api/jobs/compare?job_ids=A&job_ids=B` endpoint, which streams multiple `JobResponse` objects in a single call so the UI stays in sync with backend payloads.
+- Each comparison card links back to the job timeline and report workspace, keeping Phase 4 aggregation, audit trails, and exports tightly coupled.
 
 ## Crawling & compliance
 

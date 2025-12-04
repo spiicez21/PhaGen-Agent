@@ -1,10 +1,31 @@
 from __future__ import annotations
 
 import json
+import os
 from typing import Any, Dict, List
 
 from jinja2 import BaseLoader, Environment, select_autoescape
-from weasyprint import HTML
+
+try:  # pragma: no cover - optional dependency
+    import pdfkit
+except Exception as exc:  # noqa: BLE001
+    pdfkit = None  # type: ignore[assignment]
+    _PDFKIT_IMPORT_ERROR: Exception | None = exc
+    _PDFKIT_CONFIG = None
+    _PDFKIT_CONFIG_ERROR: Exception | None = exc
+else:
+    _PDFKIT_IMPORT_ERROR = None
+    wkhtmltopdf_path = os.getenv("WKHTMLTOPDF_PATH")
+    try:
+        _PDFKIT_CONFIG = (
+            pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
+            if wkhtmltopdf_path
+            else pdfkit.configuration()
+        )
+        _PDFKIT_CONFIG_ERROR: Exception | None = None
+    except (OSError, IOError) as exc:  # wkhtmltopdf binary missing
+        _PDFKIT_CONFIG = None
+        _PDFKIT_CONFIG_ERROR = exc
 
 from .schemas import JobResponse
 
@@ -82,6 +103,16 @@ _REPORT_TEMPLATE = _ENV.from_string(
       .meta-key {
         font-weight: 600;
       }
+      .validation-list {
+        margin: 16px 0 0;
+        padding-left: 18px;
+      }
+      .validation-list li {
+        margin-bottom: 10px;
+      }
+      .validation-status {
+        font-weight: 600;
+      }
       footer {
         margin-top: 40px;
         font-size: 11px;
@@ -93,7 +124,7 @@ _REPORT_TEMPLATE = _ENV.from_string(
     <header>
       <p class=\"eyebrow\">PhaGen Agentic · Innovation Story</p>
       <h1>{{ molecule }}</h1>
-      <p>Job ID {{ job_id }} · Generated {{ generated_at }}</p>
+      <p>Job ID {{ job_id }} · Report V{{ report_version }} · Generated {{ generated_at }}</p>
     </header>
 
     <section class=\"summary-box\">
@@ -102,6 +133,21 @@ _REPORT_TEMPLATE = _ENV.from_string(
       <p style=\"margin-top: 12px;\">Market score: {{ market_score }}</p>
       <p style=\"margin-top: 12px;\">{{ innovation_story }}</p>
     </section>
+
+    {% if validation %}
+    <section class="summary-box">
+      <p class="eyebrow">Claim traceability · {{ validation.status_label }}</p>
+      <p>{{ validation.claims_linked }} / {{ validation.claims_total }} claims linked to evidence.</p>
+      <ol class="validation-list">
+        {% for claim in validation.claims %}
+        <li>
+          <span class="validation-status">{{ claim.claim_text }}</span><br />
+          Evidence: {{ claim.evidence_label }}
+        </li>
+        {% endfor %}
+      </ol>
+    </section>
+    {% endif %}
 
     {% for worker in worker_sections %}
     <section class=\"worker-section\">
@@ -175,9 +221,31 @@ def _format_evidence(evidence: List[Dict[str, Any]]) -> List[Dict[str, str]]:
                 "type": record.get("type", "Evidence"),
                 "text": _truncate(record.get("text", "")),
                 "url": record.get("url", ""),
+                "evidence_id": record.get("evidence_id", ""),
             }
         )
     return entries
+
+
+def _format_claim_links(validation: Dict[str, Any]) -> Dict[str, Any] | None:
+    if not validation:
+        return None
+    claims = []
+    for claim in validation.get("claim_links", []):
+        evidence_ids = claim.get("evidence_ids") or []
+        label = ", ".join(evidence_ids) if evidence_ids else "Not linked"
+        claims.append(
+            {
+                "claim_text": _truncate(claim.get("claim_text", ""), 320),
+                "evidence_label": label,
+            }
+        )
+    return {
+        "status_label": (validation.get("status") or "Needs review").replace("_", " ").title(),
+        "claims_total": validation.get("claims_total", 0),
+        "claims_linked": validation.get("claims_linked", 0),
+        "claims": claims,
+    }
 
 
 def _build_context(job: JobResponse) -> Dict[str, object]:
@@ -212,14 +280,19 @@ def _build_context(job: JobResponse) -> Dict[str, object]:
     except (ValueError, TypeError):
         market_score = 0
 
+    validation_block = _format_claim_links(payload.get("validation") or {})
+    report_version = payload.get("report_version") or job.report_version or 1
+
     return {
         "molecule": molecule,
         "job_id": job.job_id,
         "generated_at": job.updated_at.strftime("%b %d, %Y %H:%M UTC"),
+      "report_version": report_version,
         "innovation_story": payload.get("innovation_story", ""),
         "recommendation": recommendation,
         "market_score": market_score,
         "worker_sections": workers,
+        "validation": validation_block,
     }
 
 
@@ -230,5 +303,18 @@ def render_report_html(job: JobResponse) -> str:
 
 def generate_report_pdf(job: JobResponse) -> bytes:
     html = render_report_html(job)
-    pdf = HTML(string=html, base_url=".")
-    return pdf.write_pdf()
+
+    if pdfkit and _PDFKIT_CONFIG:
+        try:
+            return pdfkit.from_string(html, False, configuration=_PDFKIT_CONFIG)
+        except (OSError, IOError) as exc:  # noqa: BLE001
+            raise RuntimeError(
+                "wkhtmltopdf failed to generate a PDF. Ensure the wkhtmltopdf binary is installed "
+                "and accessible (set WKHTMLTOPDF_PATH if it's not on PATH)."
+            ) from exc
+
+    raise RuntimeError(
+        "wkhtmltopdf is not configured. Install wkhtmltopdf from https://wkhtmltopdf.org/downloads.html "
+        "and ensure pdfkit can locate it (add to PATH or set WKHTMLTOPDF_PATH). "
+        f"pdfkit import error: {_PDFKIT_IMPORT_ERROR}; configuration error: {_PDFKIT_CONFIG_ERROR}"
+    )
