@@ -103,6 +103,11 @@ The repo-level `requirements.txt` simply pulls in `backend/requirements.txt` and
    ```
    This rebuilds the live retriever index at `indexes/chroma/`, reuses embeddings for unchanged passages via the on-disk cache at `indexes/.embedding_cache.json`, snapshots the run under `indexes/chroma_snapshots/`, **and** refreshes the RDKit structure catalog from `indexes/data/normalized_smiles.jsonl`. Structure SVGs + metadata land under `indexes/data/structures/{images,metadata}/` with a manifest at `indexes/data/structures/structures.manifest.json`, which workers/reports read at runtime. Each manifest entry now records the provenance schema (`image_id`, `source_type`, `source_ref`, `license`, `generated_at`) for downstream auditing. Pass `--no-structures` to skip the render step, or override the inputs via the `--structure-*` flags (records path, output dirs, manifest, width/height). Standard snapshot flags (`--cadence`, `--snapshot-name`, `--no-snapshot`, cache controls) still apply.
 
+### Section 10 — Automation & CI
+
+- **Local stack via Docker Compose**: from the repo root run `cd infra` followed by `docker compose up --build`. The compose file lifts Postgres, MinIO, Ollama, the RDKit renderer, the FastAPI backend, and the Next.js frontend on one bridge network with healthy dependencies. Stop everything with `docker compose down` (add `-v` to prune volumes) or target individual services such as `docker compose up api frontend` during development.
+- **Continuous integration**: `.github/workflows/ci.yml` executes on every push/PR to `main`, installing Python + Node dependencies, running backend `pytest`, linting the frontend with `npm run lint`, and ensuring all Docker images build cleanly through `docker compose build`. Use it as the reference pipeline when extending Section 10’s test/image requirements.
+
 ## Architecture overview
 
 ```

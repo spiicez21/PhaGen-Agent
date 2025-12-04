@@ -22,6 +22,15 @@ services:
       - ../agents:/agents
     ports:
       - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      rdkit-service:
+        condition: service_healthy
+    networks:
+      - phagen
 
   frontend:
     build:
@@ -33,6 +42,11 @@ services:
       - ../frontend:/app
     ports:
       - "3000:3000"
+    depends_on:
+      api:
+        condition: service_started
+    networks:
+      - phagen
 
   postgres:
     image: postgres:16-alpine
@@ -43,6 +57,15 @@ services:
       - POSTGRES_DB=phagen
     ports:
       - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U phagen -d phagen"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - phagen
 
   minio:
     image: quay.io/minio/minio
@@ -53,12 +76,20 @@ services:
     ports:
       - "9000:9000"
       - "9001:9001"
+    volumes:
+      - minio-data:/data
+    networks:
+      - phagen
 
   ollama:
     image: ollama/ollama
     pull_policy: always
     ports:
       - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    networks:
+      - phagen
 
   rdkit-service:
     build:
@@ -72,3 +103,14 @@ services:
       interval: 30s
       timeout: 5s
       retries: 5
+    networks:
+      - phagen
+
+networks:
+  phagen:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  minio-data:
+  ollama-models:

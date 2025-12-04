@@ -33,7 +33,8 @@
    - Index builder deduplicates overlapping clinical/literature passages so the retriever surfaces a single canonical chunk per evidence item.
 
 5. **Infra**
-   - Docker Compose (coming soon) wires Postgres, MinIO, Ollama, backend, and frontend.
+   - `infra/docker-compose.yml` wires Postgres, MinIO, Ollama, backend, frontend, and the RDKit renderer onto a single bridge network so the full stack spins up with one `docker compose up`.
+   - `.github/workflows/ci.yml` (Section 10) runs backend pytest, frontend lint, and `docker compose build` to guarantee the same images that ship locally also build in CI.
    - Includes `rdkit-service` (FastAPI + RDKit) for on-demand SMILES rendering consumed by backend workers.
 
 ## Data flow checklist
