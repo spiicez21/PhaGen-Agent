@@ -55,6 +55,7 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - SMILES normalizer job (`python indexes/smiles_normalizer.py`) canonicalizes SMILES/InChI inputs via RDKit, dedupes aliases, and emits JSONL + manifest files before indexing and synonym expansion.
 - Optional OSRA pipeline (`python indexes/osra_pipeline.py`) walks approved structure diagrams, enforces `allow_osra` gates, hashes image artifacts, converts diagrams to SMILES via the OSRA CLI, and emits JSONL + manifest outputs for downstream normalization.
 - RDKit structure rendering now runs automatically inside `indexes/build_index.py`, consuming `indexes/data/normalized_smiles.jsonl`, emitting SVG/metadata assets + manifests under `indexes/data/structures/`, and wiring summary stats into snapshot manifests so workers/reports can reuse the catalog without re-rendering.
+- Structure manifest entries now carry full provenance metadata (`image_id`, `source_type`, `source_ref`, `license`, `generated_at`) so downstream workers/reports can trace each asset.
 
 ## 🔜 Pending
 ### Phase UI — Experience & admin
@@ -65,9 +66,6 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - [ ] Visual diff viewer to compare report versions (V1 vs V2 changes).
 - [ ] Molecule structure viewer component (SVG viewer + zoom + download) powered by RDKit-generated SVGs.
 - [ ] Add "Request structure" action in molecule intake to create SMILES → RDKit render.
-
-### Data & infra follow-ups
-- [ ] Image provenance schema storing `image_id`, `source_type` (rdkit/pubchem/scrape), `source_ref` (SMILES/URL/CID), license, and `generated_at`.
 
 ### Quality, guardrails, and ops
 - [ ] Implement retrieval precision checks / coverage metrics plus guardrails (evidence thresholds, anomaly detection).

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2025-12-04T13:09:54.552873+00:00",
+  "generated_at": "2025-12-04T13:16:27.819718+00:00",
   "input": "D:\\PhaGen-Agent\\indexes\\data\\normalized_smiles.jsonl",
   "output_dir": "D:\\PhaGen-Agent\\indexes\\data\\structures\\images",
   "metadata_dir": "D:\\PhaGen-Agent\\indexes\\data\\structures\\metadata",
@@ -12,7 +12,10 @@
       "inchikey": "ISWRGOKTTBVCFA-UHFFFAOYSA-N",
       "svg_path": "images\\iswrgokttbvcfa-uhfffaoysa-n.svg",
       "metadata_path": "metadata\\iswrgokttbvcfa-uhfffaoysa-n.json",
-      "generated_at": "2025-12-04T13:09:54.548866+00:00"
+      "generated_at": "2025-12-04T13:16:27.814717+00:00",
+      "source_type": "smiles",
+      "source_ref": "Cc1ccc(=O)n(-c2ccccc2)c1",
+      "license": "internal-use-only"
     },
     {
       "image_id": "cpmdpsxjelvgjg-uudcscgesa-n",
@@ -22,7 +25,10 @@
       "inchikey": "CPMDPSXJELVGJG-UUDCSCGESA-N",
       "svg_path": "images\\cpmdpsxjelvgjg-uudcscgesa-n.svg",
       "metadata_path": "metadata\\cpmdpsxjelvgjg-uudcscgesa-n.json",
-      "generated_at": "2025-12-04T13:09:54.551870+00:00"
+      "generated_at": "2025-12-04T13:16:27.818716+00:00",
+      "source_type": "smiles",
+      "source_ref": "COC(=O)c1ccc2c(/C(=N/c3ccc(N(C)C(=O)CN4CCN(C)CC4)cc3)c3ccccc3)c(O)[nH]c2c1",
+      "license": "internal-use-only"
     }
   ],
   "failures": [],

@@ -13,6 +13,7 @@
     "InChI=1S/C12H11NO/c1-10-7-8-12(14)13(9-10)11-5-3-2-4-6-11/h2-9H,1H3",
     "Pirfenidone"
   ],
-  "generated_at": "2025-12-04T13:09:54.548866+00:00",
+  "generated_at": "2025-12-04T13:16:27.814717+00:00",
+  "license": "internal-use-only",
   "origin": "indexes.render_structures"
 }

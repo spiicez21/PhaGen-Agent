@@ -42,6 +42,9 @@ class StructureAsset:
     inchikey: str
     name: str
     generated_at: str
+    source_type: str
+    source_ref: str
+    license_info: str
 
 
 def render_structure_catalog(config: StructureRenderConfig) -> Dict[str, object]:
@@ -127,17 +130,22 @@ def _render_record(record: dict, config: StructureRenderConfig, used_ids: Dict[s
     metadata_path = config.metadata_dir / f"{image_id}.json"
 
     svg_path.write_text(svg, encoding="utf-8")
+    generated_at = _utcnow()
+    source_type = record.get("source_type") or record.get("source") or "rdkit"
+    source_ref = record.get("source_ref") or record.get("source_reference") or canonical_smiles
+    license_info = record.get("license") or "internal-use-only"
     metadata = {
         "image_id": image_id,
         "asset_path": str(svg_path),
-        "source_type": record.get("source", "smiles"),
-        "source_reference": record.get("name") or canonical_smiles,
+        "source_type": source_type,
+        "source_reference": source_ref,
         "smiles": canonical_smiles,
         "inchi": canonical_inchi or "",
         "inchikey": inchikey or "",
         "name": record.get("name", ""),
         "synonyms": record.get("synonyms", []),
-        "generated_at": _utcnow(),
+        "generated_at": generated_at,
+        "license": license_info,
         "origin": "indexes.render_structures",
     }
     metadata_path.write_text(json.dumps(metadata, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -150,7 +158,10 @@ def _render_record(record: dict, config: StructureRenderConfig, used_ids: Dict[s
         canonical_inchi=canonical_inchi or "",
         inchikey=inchikey or "",
         name=record.get("name", ""),
-        generated_at=metadata["generated_at"],
+        generated_at=generated_at,
+        source_type=source_type,
+        source_ref=source_ref,
+        license_info=license_info,
     )
 
 
@@ -196,6 +207,9 @@ def _build_manifest(
                 "svg_path": _relativize(asset.svg_path, manifest_dir),
                 "metadata_path": _relativize(asset.metadata_path, manifest_dir),
                 "generated_at": asset.generated_at,
+                "source_type": asset.source_type,
+                "source_ref": asset.source_ref,
+                "license": asset.license_info,
             }
         )
 
