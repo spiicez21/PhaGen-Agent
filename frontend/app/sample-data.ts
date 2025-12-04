@@ -21,6 +21,7 @@ export const SAMPLE_PAYLOAD: MasterPayload = {
     "Pirfenidone maintains a consistent anti-fibrotic signal across PF-ILD cohorts with manageable liver monitoring, opening a viable path for label expansion once follow-up registrational data matures.",
   recommendation: "Investigate",
   market_score: 72,
+  report_version: 1,
   workers: {
     clinical: {
       summary:
@@ -136,6 +137,7 @@ export const METFORMIN_PAYLOAD: MasterPayload = {
     "Metformin shows emerging anti-fibrotic and anti-inflammatory activity in NASH and SSc cohorts, but controlled data remains limited outside metabolic endpoints.",
   recommendation: "Monitor",
   market_score: 61,
+  report_version: 2,
   workers: {
     clinical: {
       summary:
@@ -368,13 +370,15 @@ export const COMPARISON_SLOTS: ComparisonSlot[] = [
     jobId: DEMO_JOB.id,
     molecule: "Pirfenidone",
     lastUpdated: "Dec 03, 2025",
-    payload: SAMPLE_PAYLOAD
+    payload: SAMPLE_PAYLOAD,
+    reportVersion: SAMPLE_PAYLOAD.report_version
   },
   {
     jobId: "JOB-4810",
     molecule: "Metformin",
     lastUpdated: "Nov 30, 2025",
-    payload: METFORMIN_PAYLOAD
+    payload: METFORMIN_PAYLOAD,
+    reportVersion: METFORMIN_PAYLOAD.report_version
   }
 ];
 

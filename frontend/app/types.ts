@@ -140,6 +140,7 @@ export interface ComparisonSlot {
   molecule: string;
   lastUpdated: string;
   payload: MasterPayload;
+  reportVersion?: number;
 }
 
 export interface JobApiResponse {

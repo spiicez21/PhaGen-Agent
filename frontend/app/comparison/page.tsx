@@ -32,12 +32,14 @@ export default function ComparisonPage() {
     const payloadWithMeta = job.payload as MasterPayloadWithMeta;
     const { molecule: moleculeLabel, ...rest } = payloadWithMeta;
     const normalizedPayload = rest as MasterPayload;
+    const reportVersion = job.report_version ?? payloadWithMeta.report_version;
 
     return {
       jobId: job.job_id,
       molecule: moleculeLabel ?? `Job ${job.job_id}`,
       lastUpdated: formatDate(job.updated_at),
-      payload: normalizedPayload
+      payload: normalizedPayload,
+      reportVersion
     };
   };
 

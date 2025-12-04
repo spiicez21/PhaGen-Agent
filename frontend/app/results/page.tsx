@@ -5,6 +5,7 @@ import { DEMO_JOB, MARKET_METRICS, SAMPLE_PAYLOAD } from "../sample-data";
 export default function ResultsPage() {
   const workers = SAMPLE_PAYLOAD.workers;
   const validation = SAMPLE_PAYLOAD.validation;
+  const reportVersion = SAMPLE_PAYLOAD.report_version ?? 1;
 
   return (
     <div className="section-stack">
@@ -12,7 +13,9 @@ export default function ResultsPage() {
         <div className="section-card space-y-4">
           <p className="eyebrow">Innovation story</p>
           <h1 className="text-2xl font-semibold">Pirfenidone overview</h1>
-          <p className="subtle-text">Recommendation: {SAMPLE_PAYLOAD.recommendation}</p>
+          <p className="subtle-text">
+            Recommendation: {SAMPLE_PAYLOAD.recommendation} · Report V{reportVersion}
+          </p>
           <p>{SAMPLE_PAYLOAD.innovation_story}</p>
           <div className="flex gap-3">
             <Link className="btn-primary" href="/reports">
@@ -37,7 +40,7 @@ export default function ResultsPage() {
         </div>
       </section>
 
-      <EvidenceTabs workers={workers} reportJobId={DEMO_JOB.id} />
+      <EvidenceTabs workers={workers} reportJobId={DEMO_JOB.id} reportVersion={reportVersion} />
 
       {validation && (
         <section className="section-card space-y-4">
