@@ -53,6 +53,7 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - Evidence deduplication now drops lower-priority duplicates between clinical and literature corpora (clinical wins), annotating kept/dropped entries via `metadata.dedup` and surfacing stats inside snapshot manifests.
 - RDKit rendering now has a dedicated `rdkit-service` container (Conda + RDKit + Pillow + FastAPI) wired into `docker-compose.yml` for on-demand SMILES → SVG/PNG rendering via `POST /render`.
 - SMILES normalizer job (`python indexes/smiles_normalizer.py`) canonicalizes SMILES/InChI inputs via RDKit, dedupes aliases, and emits JSONL + manifest files before indexing and synonym expansion.
+- Optional OSRA pipeline (`python indexes/osra_pipeline.py`) walks approved structure diagrams, enforces `allow_osra` gates, hashes image artifacts, converts diagrams to SMILES via the OSRA CLI, and emits JSONL + manifest outputs for downstream normalization.
 
 ## 🔜 Pending
 ### Phase UI — Experience & admin
@@ -65,7 +66,6 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - [ ] Add "Request structure" action in molecule intake to create SMILES → RDKit render.
 
 ### Data & infra follow-ups
-- [ ] Add optional OSRA image pipeline for OCR-to-SMILES conversion of scraped diagrams (only when allowed).
 - [ ] Hook RDKit rendering into indexes and reports pipelines so structure images are available to workers.
 - [ ] Image provenance schema storing `image_id`, `source_type` (rdkit/pubchem/scrape), `source_ref` (SMILES/URL/CID), license, and `generated_at`.
 

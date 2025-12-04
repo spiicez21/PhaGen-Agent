@@ -82,7 +82,14 @@ The repo-level `requirements.txt` simply pulls in `backend/requirements.txt` and
    npm install
    npm run crawl
    ```
-   After the crawler populates `crawler/storage/datasets/default`, canonicalize SMILES/InChI strings so synonyms stay consistent across runs:
+   After the crawler populates `crawler/storage/datasets/default`, optionally convert any scraped structure diagrams into SMILES via OSRA (only run this if the source license allows OCR). Flip the `allow_osra` flag inside `indexes/data/sample_diagrams.jsonl` or point to your own manifest:
+   ```powershell
+   cd D:\PhaGen-Agent
+   .\.venv\Scripts\python.exe indexes\osra_pipeline.py --input indexes\data\sample_diagrams.jsonl --output indexes\data\osra_results.jsonl --manifest indexes\data\manifests\osra_results.manifest.json --osra-binary indexes\bin\osra-wsl.cmd --image-path-mode wsl --skip-missing
+   ```
+   The script enforces the `allow_osra` gate per record, hashes image assets, and emits JSONL plus a manifest under `indexes/data/manifests/` summarizing converted/skipped files. If you installed a native Windows OSRA binary you can drop the `--osra-binary/--image-path-mode` overrides; keep them when proxying through the provided WSL wrapper (`indexes/bin/osra-wsl.cmd`).
+
+   Next, canonicalize SMILES/InChI strings so synonyms stay consistent across runs:
    ```powershell
    cd D:\PhaGen-Agent
    .\.venv\Scripts\python.exe indexes\smiles_normalizer.py --input indexes\data\sample_smiles.jsonl --output indexes\data\normalized_smiles.jsonl
@@ -131,9 +138,10 @@ See `docs/architecture.md` for the full sequence diagram and responsibilities pe
 ## Data & indexing pipeline
 
 1. Run the Crawlee project to refresh datasets under `crawler/storage/`.
-2. Canonicalize SMILES/InChI inputs with `indexes/smiles_normalizer.py --input <raw>.jsonl --output indexes/data/normalized_smiles.jsonl` so downstream synonym expansion and retrievers reference the same canonical strings (manifests land under `indexes/data/manifests/`).
-3. Execute `indexes/build_index.py` from the repo root (inside `.venv`) to embed new passages into `indexes/chroma/`, reusing cached embeddings where possible, deduplicating overlapping clinical/literature passages (clinical wins by priority), and emitting a daily snapshot under `indexes/chroma_snapshots/`.
-3. Agents read from `indexes/chroma/` by default; to reproduce a historical run, copy or point the retriever at the desired snapshot folder (each includes a `manifest.json` with dataset hash + git commit).
+2. **Optional / gated**: if you scraped structure diagrams and have explicit permission to OCR them, run `indexes/osra_pipeline.py --input <diagrams>.jsonl --output indexes/data/osra_results.jsonl --skip-missing`. The pipeline enforces the `allow_osra` flag per record, hashes input files, snapshots successes/skips to a manifest under `indexes/data/manifests/`, and emits JSONL records that can be merged into downstream SMILES lists.
+3. Canonicalize SMILES/InChI inputs with `indexes/smiles_normalizer.py --input <raw>.jsonl --output indexes/data/normalized_smiles.jsonl` so downstream synonym expansion and retrievers reference the same canonical strings (manifests land under `indexes/data/manifests/`). Use the OSRA output JSONL as one of the normalizer inputs when diagrams need to feed synonyms.
+4. Execute `indexes/build_index.py` from the repo root (inside `.venv`) to embed new passages into `indexes/chroma/`, reusing cached embeddings where possible, deduplicating overlapping clinical/literature passages (clinical wins by priority), and emitting a daily snapshot under `indexes/chroma_snapshots/`.
+5. Agents read from `indexes/chroma/` by default; to reproduce a historical run, copy or point the retriever at the desired snapshot folder (each includes a `manifest.json` with dataset hash + git commit).
 4. Redeploy/restart workers if the embeddings or retriever settings change so new sources are picked up.
 
 This API-first crawl honors robots.txt (see `crawler/src/robots.ts`) and caps page fragments at 5 KB before indexing. Extend the schema if you add new corpora.
@@ -187,6 +195,13 @@ If PDF export fails, the backend raises a runtime error that tells you whether `
 - Each completed job now carries a `payload.structure` block containing `{ svg, path, metadata_path, smiles, source_type, source_reference, image_id, generated_at, error }`. The frontend consumes this metadata to display the molecule preview, and the PDF exporter embeds the same SVG inline while surfacing the provenance trail.
 - `infra/docker-compose.yml` now includes `rdkit-service`, a lightweight FastAPI container running RDKit via Conda. Start it with `docker compose up rdkit-service` (or include it in `docker compose up`). Hit `http://localhost:8081/render` with `{ "smiles": "CC(=O)O", "format": "svg" }` to fetch SVG/PNG payloads; the backend reads the URL from `RDKIT_SERVICE_URL`.
 - After installing/upgrading RDKit, restart the backend (`uvicorn app.main:app --reload`) to ensure the new dependency and environment variables are picked up and new jobs generate structure previews automatically.
+
+### OSRA diagram OCR (optional)
+
+- Install the OSRA CLI on the host where you plan to run diagram OCR. The binary is available via Homebrew (`brew install osra`), Conda (`conda install -c conda-forge osra`), or by building from [source](https://github.com/Novartis/osra). On Windows, install OSRA inside WSL (`sudo apt install osra`) and use the provided wrapper `indexes/bin/osra-wsl.cmd` plus `--image-path-mode wsl`, or provide the absolute path to a native Windows binary with `--osra-binary`.
+- Populate a JSONL manifest (see `indexes/data/sample_diagrams.jsonl`) with `diagram_id`, `image_path`, metadata, and an explicit `allow_osra` flag per record. Only assets with `allow_osra: true` will be processed, so you can safely keep restricted diagrams in the manifest without risking violations.
+- Run `python indexes/osra_pipeline.py --input <manifest>.jsonl --output indexes/data/osra_results.jsonl --skip-missing`. When invoking through WSL, pass `--osra-binary indexes/bin/osra-wsl.cmd --image-path-mode wsl`; supply `--extra-osra-args` if you need to adjust resolution or language packs, and use `--base-dir` when image paths are relative to another folder.
+- Each run emits JSONL plus a manifest under `indexes/data/manifests/` summarizing conversions, skips, and failures. Feed the output JSONL into `smiles_normalizer.py` (or merge it with crawler-sourced SMILES) before synonym expansion and indexing.
 
 ## Comparison workspace
 
