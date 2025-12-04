@@ -23,6 +23,7 @@ indexes/*.faiss
 indexes/*.bin
 indexes/*.chroma
 indexes/chroma
+indexes/chroma_snapshots
 crawler/storage/
 crawler/**/*.dataset
 crawler/**/*.jsonl

@@ -99,6 +99,7 @@ Index Management:
 - Incremental rebuilds  
 - Deduplication  
 - Embedding cache  
+- `indexes/build_index.py` now emits daily (default) or monthly snapshots under `indexes/chroma_snapshots/` with `manifest.json` (dataset hash + git commit) while keeping the active retriever under `indexes/chroma/`.
 
 ---
 

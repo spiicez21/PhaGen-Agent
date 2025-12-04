@@ -87,7 +87,7 @@ The repo-level `requirements.txt` simply pulls in `backend/requirements.txt` and
    cd D:\PhaGen-Agent
    .\.venv\Scripts\python.exe indexes\build_index.py
    ```
-   This writes embeddings to `indexes/chroma/` (git-ignored). Re-run the script any time new crawl output lands so FAISS/Chroma stays current.
+   This rebuilds the live retriever index at `indexes/chroma/` and, by default, snapshots that build under `indexes/chroma_snapshots/` using a daily timestamp. Use `--cadence monthly` or `--snapshot-name my-run` for custom folders, and pass `--no-snapshot` if you explicitly want the legacy "current only" behavior.
 
 ## Architecture overview
 
@@ -124,8 +124,8 @@ See `docs/architecture.md` for the full sequence diagram and responsibilities pe
 ## Data & indexing pipeline
 
 1. Run the Crawlee project to refresh datasets under `crawler/storage/`.
-2. Execute `indexes/build_index.py` from the repo root (inside `.venv`) to embed new passages into `indexes/chroma/`.
-3. Point the agents retriever at the fresh Chroma snapshot (default path already aligns with `indexes/chroma/`).
+2. Execute `indexes/build_index.py` from the repo root (inside `.venv`) to embed new passages into `indexes/chroma/` and emit a daily snapshot under `indexes/chroma_snapshots/`.
+3. Agents read from `indexes/chroma/` by default; to reproduce a historical run, copy or point the retriever at the desired snapshot folder (each includes a `manifest.json` with dataset hash + git commit).
 4. Redeploy/restart workers if the embeddings or retriever settings change so new sources are picked up.
 
 This API-first crawl honors robots.txt (see `crawler/src/robots.ts`) and caps page fragments at 5 KB before indexing. Extend the schema if you add new corpora.
