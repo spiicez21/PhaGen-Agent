@@ -37,7 +37,8 @@ export const SAMPLE_PAYLOAD: MasterPayload = {
     source_type: "smiles",
     source_reference: "O=C1NC(=O)N(C)C(=O)N1C",
     generated_at: "2025-12-04T10:00:00Z",
-    image_id: "pirfenidone-demo"
+    image_id: "pirfenidone-demo",
+    license: "internal-use-only"
   },
   workers: {
     clinical: {
@@ -164,7 +165,8 @@ export const METFORMIN_PAYLOAD: MasterPayload = {
     source_type: "smiles",
     source_reference: "CN(C)C(=N)N=C(N)N",
     generated_at: "2025-12-02T18:45:00Z",
-    image_id: "metformin-demo"
+    image_id: "metformin-demo",
+    license: "internal-use-only"
   },
   workers: {
     clinical: {

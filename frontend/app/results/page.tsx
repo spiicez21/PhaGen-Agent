@@ -55,6 +55,9 @@ export default function ResultsPage() {
             {structure.generated_at && (
               <p className="text-xs text-neutral-500">Generated {structure.generated_at}</p>
             )}
+            {structure.license && (
+              <p className="text-xs text-neutral-500">License: {structure.license}</p>
+            )}
             {structure.image_id && (
               <p className="text-xs text-neutral-500">Image ID: {structure.image_id}</p>
             )}

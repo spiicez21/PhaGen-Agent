@@ -10,6 +10,8 @@ from urllib.parse import quote
 
 import httpx
 
+from .structure_catalog import get_structure_catalog
+
 try:  # pragma: no cover - optional heavy dependency
     from rdkit import Chem
     from rdkit.Chem import AllChem
@@ -30,6 +32,8 @@ STRUCTURE_ASSET_DIR = REPORT_IMAGES_ROOT / "structures"
 STRUCTURE_METADATA_DIR = REPORT_IMAGES_ROOT / "metadata"
 PUBCHEM_BASE_URL = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
 PUBCHEM_TIMEOUT = 15.0
+DEFAULT_INTERNAL_LICENSE = "internal-use-only"
+PUBCHEM_LICENSE = "pubchem-pug-rest"
 
 
 @dataclass
@@ -38,6 +42,48 @@ class StructureRenderResult:
     path: Path
     metadata_path: Path
     metadata: Dict[str, str]
+
+
+def _read_metadata_file(path: Path) -> Dict[str, str]:
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except (FileNotFoundError, OSError):
+        return {}
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _structure_from_catalog(smiles: str | None, inchi: str | None = None) -> Dict[str, str] | None:
+    if not smiles:
+        return None
+
+    catalog = get_structure_catalog()
+    entry = catalog.lookup(smiles=smiles)
+    if entry is None:
+        return None
+
+    try:
+        svg = entry.svg_path.read_text(encoding="utf-8")
+    except (FileNotFoundError, OSError):
+        return None
+
+    metadata = _read_metadata_file(entry.metadata_path)
+    return {
+        "svg": svg,
+        "path": str(entry.svg_path),
+        "error": "",
+        "smiles": smiles,
+        "metadata_path": str(entry.metadata_path),
+        "source_type": metadata.get("source_type") or entry.source_type or "smiles",
+        "source_reference": metadata.get("source_reference") or entry.source_ref or smiles,
+        "inchi": metadata.get("inchi") or entry.canonical_inchi or inchi or "",
+        "generated_at": metadata.get("generated_at") or entry.generated_at or "",
+        "image_id": metadata.get("image_id") or entry.image_id or "",
+        "license": metadata.get("license") or entry.license or DEFAULT_INTERNAL_LICENSE,
+    }
 
 
 def render_structure_svg(
@@ -78,6 +124,7 @@ def render_structure_svg(
         source_reference=source_reference or smiles,
         smiles=smiles,
         inchi=inchi,
+        license_label=DEFAULT_INTERNAL_LICENSE,
     )
 
 
@@ -119,6 +166,7 @@ def render_structure_svg_pubchem(
         smiles=smiles or "",
         inchi=None,
         pubchem_cid=cid,
+        license_label=PUBCHEM_LICENSE,
     )
 
 
@@ -136,6 +184,9 @@ def build_structure_payload(
 ) -> Dict[str, str]:
     filename_hint = f"{molecule_label}-{job_id[:8]}"
     fallback_image_id = _sanitize_filename(filename_hint)
+    catalog_structure = _structure_from_catalog(smiles, inchi=inchi)
+    if catalog_structure:
+        return catalog_structure
     try:
         result = render_structure_svg(
             smiles,
@@ -170,7 +221,14 @@ def build_structure_payload(
                 "inchi": inchi or "",
                 "generated_at": "",
                 "image_id": fallback_image_id,
+                "license": "",
             }
+
+    license_label = result.metadata.get("license")
+    if not license_label:
+        license_label = (
+            PUBCHEM_LICENSE if result.metadata.get("source_type") == "pubchem" else DEFAULT_INTERNAL_LICENSE
+        )
 
     return {
         "svg": result.svg,
@@ -183,6 +241,7 @@ def build_structure_payload(
         "inchi": inchi or "",
         "generated_at": result.metadata.get("generated_at", ""),
         "image_id": result.metadata.get("image_id", fallback_image_id),
+        "license": license_label,
     }
 
 
@@ -204,6 +263,7 @@ def _persist_structure_svg(
     smiles: str,
     inchi: str | None,
     pubchem_cid: str | None = None,
+    license_label: str = DEFAULT_INTERNAL_LICENSE,
 ) -> StructureRenderResult:
     target_dir = output_dir or STRUCTURE_ASSET_DIR
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -223,6 +283,7 @@ def _persist_structure_svg(
         "smiles": smiles,
         "inchi": inchi or "",
         "generated_at": generated_at,
+        "license": license_label,
     }
     if pubchem_cid:
         metadata["pubchem_cid"] = str(pubchem_cid)

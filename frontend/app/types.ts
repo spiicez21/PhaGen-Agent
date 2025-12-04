@@ -44,6 +44,7 @@ export interface StructureAsset {
   generated_at?: string;
   image_id?: string;
   error?: string;
+  license?: string;
 }
 
 export interface MasterPayload {

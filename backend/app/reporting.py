@@ -167,8 +167,21 @@ _REPORT_TEMPLATE = _ENV.from_string(
         {{ structure.svg | safe }}
       </div>
       {% endif %}
+      {% if structure.source_type or structure.source_reference or structure.license or structure.generated_at %}
+      <p class="structure-meta">
+        {% if structure.source_type %}Source: {{ structure.source_type | upper }}{% endif %}
+        {% if structure.source_reference %}
+          {% if structure.source_type %} · {% endif %}{{ structure.source_reference }}
+        {% endif %}
+        {% if structure.license %}<br />License: {{ structure.license }}{% endif %}
+        {% if structure.generated_at %}<br />Generated {{ structure.generated_at }}{% endif %}
+      </p>
+      {% endif %}
       {% if structure.path %}
       <p class="structure-meta">Asset saved to {{ structure.path }}</p>
+      {% endif %}
+      {% if structure.metadata_path %}
+      <p class="structure-meta">Metadata: {{ structure.metadata_path }}</p>
       {% endif %}
       {% if structure.error %}
       <p class="structure-error">Structure unavailable: {{ structure.error }}</p>
