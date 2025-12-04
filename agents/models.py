@@ -27,6 +27,8 @@ class WorkerResult:
     confidence: float
     confidence_band: str
     metadata: Dict[str, str] = field(default_factory=dict)
+    metrics: Dict[str, float] = field(default_factory=dict)
+    alerts: List[str] = field(default_factory=list)
 
 
 @dataclass
