@@ -34,6 +34,7 @@
 
 5. **Infra**
    - Docker Compose (coming soon) wires Postgres, MinIO, Ollama, backend, and frontend.
+   - Includes `rdkit-service` (FastAPI + RDKit) for on-demand SMILES rendering consumed by backend workers.
 
 ## Data flow checklist
 

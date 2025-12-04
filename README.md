@@ -10,7 +10,7 @@ PhaGen Agentic is a hackathon-ready, agentic multi-worker platform that compress
 | Backend | FastAPI service with job orchestration endpoints backed by Postgres persistence |
 | Agents | Master agent plus four worker stubs wired to deterministic mock data and RAG hooks |
 | Crawler | Crawlee TypeScript project with seed list plus Section 5 normalization (boilerplate stripping, PII redaction, chunk metadata) |
-| Infra | Docker Compose file for local stack (Postgres, MinIO, Ollama, services) |
+| Infra | Docker Compose file for local stack (Postgres, MinIO, Ollama, rdkit-service, services) |
 
 The MVP mirrors the implementation plan in `ignore.md`. Build phases are mapped to repo folders so each team can work in parallel.
 
@@ -108,7 +108,7 @@ Each piece lives in its own directory but shares the same repo:
 - **Agents (`agents/`)** contain `MasterAgent`, shared `LLMClient`, synonym expansion, and four specialized workers. A structured payload powers both the UI and PDF renderer.
 - **Indexes (`indexes/`)** bundle the Chroma/FAISS build script so every crawl refresh can be re-indexed with one command.
 - **Crawler (`crawler/`)** is a Crawlee project that normalizes CT.gov, PubMed Central, FDA, and patent feeds into JSON ready for embedding.
-- **Infra (`infra/`)** holds Docker Compose wiring for Postgres, MinIO/S3-compatible storage, Ollama/OpenAI endpoints, frontend, and backend services.
+- **Infra (`infra/`)** holds Docker Compose wiring for Postgres, MinIO/S3-compatible storage, Ollama/OpenAI endpoints, frontend, backend services, and the new `rdkit-service` container that exposes SMILES → SVG/PNG rendering over HTTP.
 
 See `docs/architecture.md` for the full sequence diagram and responsibilities per component.
 
@@ -177,6 +177,7 @@ If PDF export fails, the backend raises a runtime error that tells you whether `
 - `backend/requirements.txt` now includes `rdkit-pypi==2022.9.5` plus `onnxruntime` (Chroma’s ONNX embeddings). Re-run `pip install -r backend/requirements.txt` inside the repo `.venv` after pulling these changes.
 - RDKit renders SMILES strings to SVG during job completion and stores the assets under `backend/app/report_assets/reports/images/structures/` by default, with a paired provenance JSON alongside in `.../metadata/`. Override the storage root by setting the `REPORT_ASSETS_DIR` environment variable before starting Uvicorn if you want the SVGs/PDF snippets to land elsewhere (e.g., shared storage or mounted volume).
 - Each completed job now carries a `payload.structure` block containing `{ svg, path, metadata_path, smiles, source_type, source_reference, image_id, generated_at, error }`. The frontend consumes this metadata to display the molecule preview, and the PDF exporter embeds the same SVG inline while surfacing the provenance trail.
+- `infra/docker-compose.yml` now includes `rdkit-service`, a lightweight FastAPI container running RDKit via Conda. Start it with `docker compose up rdkit-service` (or include it in `docker compose up`). Hit `http://localhost:8081/render` with `{ "smiles": "CC(=O)O", "format": "svg" }` to fetch SVG/PNG payloads; the backend reads the URL from `RDKIT_SERVICE_URL`.
 - After installing/upgrading RDKit, restart the backend (`uvicorn app.main:app --reload`) to ensure the new dependency and environment variables are picked up and new jobs generate structure previews automatically.
 
 ## Comparison workspace

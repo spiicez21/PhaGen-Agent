@@ -183,6 +183,7 @@ Dashboard Includes:
 - Evidence panels  
 - Confidence badges  
 - Citation viewer  
+- RDKit microservice (`rdkit-service`) provides SMILES → SVG/PNG rendering over HTTP so dashboards and reports can fetch deterministic structure thumbnails on demand.  
 
 Reports:
 - HTML full report  

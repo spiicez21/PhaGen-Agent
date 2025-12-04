@@ -1,0 +1,11 @@
+name: rdkit-service
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - rdkit=2023.09.4
+  - pillow
+  - pip
+  - pip:
+      - fastapi==0.115.0
+      - uvicorn[standard]==0.30.1

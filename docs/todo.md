@@ -51,6 +51,7 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - Embedding cache now stores MiniLM vectors keyed by doc hash in `indexes/.embedding_cache.json`, letting the index builder reuse embeddings for unchanged passages and only encode the delta.
 - Domain-level crawl budgets now cap HTML fetches per host (default 2 unless overridden), log usage, and annotate dataset entries when a source is skipped for exceeding its quota.
 - Evidence deduplication now drops lower-priority duplicates between clinical and literature corpora (clinical wins), annotating kept/dropped entries via `metadata.dedup` and surfacing stats inside snapshot manifests.
+- RDKit rendering now has a dedicated `rdkit-service` container (Conda + RDKit + Pillow + FastAPI) wired into `docker-compose.yml` for on-demand SMILES → SVG/PNG rendering via `POST /render`.
 
 ## 🔜 Pending
 ### Phase UI — Experience & admin
@@ -63,7 +64,6 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - [ ] Add "Request structure" action in molecule intake to create SMILES → RDKit render.
 
 ### Data & infra follow-ups
-- [ ] Add `rdkit-service` Docker image (conda + rdkit + pillow) to `docker-compose.yml` for on-demand rendering.
 - [ ] Add `smiles-normalizer` job that canonicalizes SMILES/InChI via RDKit before indexing/synonym expansion.
 - [ ] Add optional OSRA image pipeline for OCR-to-SMILES conversion of scraped diagrams (only when allowed).
 - [ ] Hook RDKit rendering into indexes and reports pipelines so structure images are available to workers.
