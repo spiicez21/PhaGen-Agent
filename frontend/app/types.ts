@@ -31,6 +31,21 @@ export interface ValidationSummary {
   claim_links: StoryClaimLink[];
 }
 
+export type StructureSource = "smiles" | "inchi" | "pubchem";
+
+export interface StructureAsset {
+  svg: string;
+  path: string;
+  smiles: string;
+  metadata_path?: string;
+  source_type?: StructureSource;
+  source_reference?: string;
+  inchi?: string;
+  generated_at?: string;
+  image_id?: string;
+  error?: string;
+}
+
 export interface MasterPayload {
   innovation_story: string;
   recommendation: string;
@@ -38,6 +53,8 @@ export interface MasterPayload {
   workers: Record<string, WorkerResultPayload>;
   validation?: ValidationSummary;
   report_version?: number;
+  structure?: StructureAsset;
+  smiles?: string;
 }
 
 export type TimelineStatus = "pending" | "running" | "completed" | "failed";
@@ -140,6 +157,7 @@ export interface ComparisonSlot {
   molecule: string;
   lastUpdated: string;
   payload: MasterPayload;
+  reportVersion?: number;
 }
 
 export interface JobApiResponse {

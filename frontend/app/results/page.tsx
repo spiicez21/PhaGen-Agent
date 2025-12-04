@@ -5,6 +5,8 @@ import { DEMO_JOB, MARKET_METRICS, SAMPLE_PAYLOAD } from "../sample-data";
 export default function ResultsPage() {
   const workers = SAMPLE_PAYLOAD.workers;
   const validation = SAMPLE_PAYLOAD.validation;
+  const reportVersion = SAMPLE_PAYLOAD.report_version ?? 1;
+  const structure = SAMPLE_PAYLOAD.structure;
 
   return (
     <div className="section-stack">
@@ -12,7 +14,9 @@ export default function ResultsPage() {
         <div className="section-card space-y-4">
           <p className="eyebrow">Innovation story</p>
           <h1 className="text-2xl font-semibold">Pirfenidone overview</h1>
-          <p className="subtle-text">Recommendation: {SAMPLE_PAYLOAD.recommendation}</p>
+          <p className="subtle-text">
+            Recommendation: {SAMPLE_PAYLOAD.recommendation} · Report V{reportVersion}
+          </p>
           <p>{SAMPLE_PAYLOAD.innovation_story}</p>
           <div className="flex gap-3">
             <Link className="btn-primary" href="/reports">
@@ -37,7 +41,42 @@ export default function ResultsPage() {
         </div>
       </section>
 
-      <EvidenceTabs workers={workers} reportJobId={DEMO_JOB.id} />
+      {structure && (
+        <section className="section-card space-y-4">
+          <div>
+            <p className="eyebrow">Molecular structure</p>
+            <h2 className="text-xl font-semibold">SMILES preview</h2>
+            <p className="subtle-text">{structure.smiles}</p>
+            {structure.source_type && structure.source_reference && (
+              <p className="text-sm text-neutral-600">
+                Source: {structure.source_type.toUpperCase()} · {structure.source_reference}
+              </p>
+            )}
+            {structure.generated_at && (
+              <p className="text-xs text-neutral-500">Generated {structure.generated_at}</p>
+            )}
+            {structure.image_id && (
+              <p className="text-xs text-neutral-500">Image ID: {structure.image_id}</p>
+            )}
+          </div>
+          {structure.svg ? (
+            <div
+              className="rounded-2xl border border-neutral-200 bg-white p-4"
+              dangerouslySetInnerHTML={{ __html: structure.svg }}
+            />
+          ) : (
+            <p className="text-sm text-red-700">{structure.error ?? "Structure unavailable."}</p>
+          )}
+          {structure.path && (
+            <p className="subtle-text">SVG asset: {structure.path}</p>
+          )}
+          {structure.metadata_path && (
+            <p className="subtle-text">Provenance: {structure.metadata_path}</p>
+          )}
+        </section>
+      )}
+
+      <EvidenceTabs workers={workers} reportJobId={DEMO_JOB.id} reportVersion={reportVersion} />
 
       {validation && (
         <section className="section-card space-y-4">

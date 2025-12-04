@@ -6,6 +6,8 @@ from typing import Any, Dict, List
 
 from jinja2 import BaseLoader, Environment, select_autoescape
 
+from .chemistry import build_structure_payload
+
 try:  # pragma: no cover - optional dependency
     import pdfkit
 except Exception as exc:  # noqa: BLE001
@@ -75,6 +77,29 @@ _REPORT_TEMPLATE = _ENV.from_string(
         border: 1px solid #e0e3ed;
         margin-bottom: 24px;
       }
+      .structure-card {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .structure-wrapper {
+        background: #fff;
+        border-radius: 12px;
+        padding: 12px;
+        border: 1px solid #e0e3ed;
+      }
+      .structure-wrapper svg {
+        width: 100%;
+        height: auto;
+      }
+      .structure-meta {
+        font-size: 11px;
+        color: #5f6476;
+      }
+      .structure-error {
+        color: #b42318;
+        font-size: 12px;
+      }
       .recommendation-chip {
         display: inline-block;
         padding: 4px 12px;
@@ -134,6 +159,23 @@ _REPORT_TEMPLATE = _ENV.from_string(
       <p style=\"margin-top: 12px;\">{{ innovation_story }}</p>
     </section>
 
+    {% if structure %}
+    <section class="summary-box structure-card">
+      <p class="eyebrow">Molecular structure</p>
+      {% if structure.svg %}
+      <div class="structure-wrapper">
+        {{ structure.svg | safe }}
+      </div>
+      {% endif %}
+      {% if structure.path %}
+      <p class="structure-meta">Asset saved to {{ structure.path }}</p>
+      {% endif %}
+      {% if structure.error %}
+      <p class="structure-error">Structure unavailable: {{ structure.error }}</p>
+      {% endif %}
+    </section>
+    {% endif %}
+
     {% if validation %}
     <section class="summary-box">
       <p class="eyebrow">Claim traceability · {{ validation.status_label }}</p>
@@ -183,6 +225,24 @@ _REPORT_TEMPLATE = _ENV.from_string(
 </html>
 """,
 )
+
+def _build_structure_block(job: JobResponse, payload: Dict[str, Any]) -> Dict[str, str] | None:
+  existing = payload.get("structure")
+  if existing:
+    return existing
+
+  smiles = payload.get("smiles") or payload.get("molecule_smiles")
+  if not smiles:
+    return None
+
+  molecule_label = (payload.get("molecule") or "molecule").strip() or "molecule"
+  structure = build_structure_payload(
+    smiles=smiles,
+    job_id=job.job_id,
+    molecule_label=molecule_label,
+  )
+  payload["structure"] = structure
+  return structure
 
 _BAND_LABELS = {
     "low": "Low",
@@ -282,17 +342,19 @@ def _build_context(job: JobResponse) -> Dict[str, object]:
 
     validation_block = _format_claim_links(payload.get("validation") or {})
     report_version = payload.get("report_version") or job.report_version or 1
+    structure_block = _build_structure_block(job, payload)
 
     return {
         "molecule": molecule,
         "job_id": job.job_id,
         "generated_at": job.updated_at.strftime("%b %d, %Y %H:%M UTC"),
-      "report_version": report_version,
+        "report_version": report_version,
         "innovation_story": payload.get("innovation_story", ""),
         "recommendation": recommendation,
         "market_score": market_score,
         "worker_sections": workers,
         "validation": validation_block,
+        "structure": structure_block,
     }
 
 

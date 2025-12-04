@@ -36,6 +36,11 @@ export function ComparisonGrid({ slots }: ComparisonGridProps) {
             </div>
             <div className="flex flex-col items-end gap-2 text-right">
               <span className="chip">{slot.payload.recommendation}</span>
+              {(slot.reportVersion ?? slot.payload.report_version) && (
+                <span className="badge">
+                  Report V{slot.reportVersion ?? slot.payload.report_version}
+                </span>
+              )}
               <span className="subtle-text">Job ID · {slot.jobId}</span>
               {slot.payload.validation && (
                 <span

@@ -29,3 +29,4 @@ crawler/**/*.jsonl
 
 # devfiles
 ignore.md
+tests

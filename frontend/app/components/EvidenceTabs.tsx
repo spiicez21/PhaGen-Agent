@@ -29,6 +29,7 @@ const PANEL_META: Record<WorkerKind, { label: string; description: string; empty
 interface EvidenceTabsProps {
   workers?: Record<string, WorkerResultPayload>;
   reportJobId?: string;
+  reportVersion?: number;
 }
 
 const formatMetadataValue = (value: string): string => {
@@ -56,7 +57,7 @@ const confidenceLabel = (band?: WorkerResultPayload["confidence_band"], score?: 
   return "Signal needs validation";
 };
 
-export const EvidenceTabs = ({ workers = {}, reportJobId }: EvidenceTabsProps) => {
+export const EvidenceTabs = ({ workers = {}, reportJobId, reportVersion }: EvidenceTabsProps) => {
   const workerKeys = useMemo(() => (Object.keys(PANEL_META) as WorkerKind[]), []);
   const available = useMemo(
     () => workerKeys.filter((key) => Boolean(workers[key])),
@@ -70,6 +71,7 @@ export const EvidenceTabs = ({ workers = {}, reportJobId }: EvidenceTabsProps) =
   const meta = PANEL_META[resolvedActive];
   const worker = workers[resolvedActive];
   const reportHref = reportJobId ? `/api/jobs/${reportJobId}/report.pdf` : undefined;
+  const versionLabel = typeof reportVersion === "number" ? `Report V${reportVersion}` : undefined;
 
   return (
     <section className="panel" aria-labelledby="evidence-heading">
@@ -107,16 +109,19 @@ export const EvidenceTabs = ({ workers = {}, reportJobId }: EvidenceTabsProps) =
             <p className="summary-card__confidence">
               {confidenceLabel(worker.confidence_band, worker.confidence)}
             </p>
-            {reportHref && (
-              <div className="flex flex-wrap gap-2 mt-3">
-                <a
-                  className="btn-secondary"
-                  href={reportHref}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Download run PDF
-                </a>
+            {(reportHref || versionLabel) && (
+              <div className="flex flex-wrap gap-2 mt-3 items-center">
+                {reportHref && (
+                  <a
+                    className="btn-secondary"
+                    href={reportHref}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Download run PDF
+                  </a>
+                )}
+                {versionLabel && <span className="badge">{versionLabel}</span>}
               </div>
             )}
             {Object.keys(worker.metadata ?? {}).length > 0 && (
