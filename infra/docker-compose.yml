@@ -7,6 +7,16 @@ services:
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     environment:
       - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql+psycopg://phagen:phagen@postgres:5432/phagen
+      - STORAGE_PROVIDER=s3
+      - S3_ENDPOINT_URL=http://minio:9000
+      - S3_REGION=us-east-1
+      - S3_ACCESS_KEY=admin
+      - S3_SECRET_KEY=phagen123
+      - S3_USE_SSL=false
+      - S3_RAW_DOCUMENTS_BUCKET=phagen-raw-documents
+      - S3_REPORTS_BUCKET=phagen-report-artifacts
+      - RDKIT_SERVICE_URL=http://rdkit-service:8081
     volumes:
       - ../backend:/app
       - ../agents:/agents
@@ -49,3 +59,16 @@ services:
     pull_policy: always
     ports:
       - "11434:11434"
+
+  rdkit-service:
+    build:
+      context: ./rdkit-service
+    environment:
+      - RDKIT_SERVICE_VERSION=0.1.0
+    ports:
+      - "8081:8081"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5

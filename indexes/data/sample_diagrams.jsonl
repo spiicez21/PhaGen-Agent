@@ -1,0 +1,2 @@
+{"diagram_id": "pirfenidone-pubchem", "image_path": "crawler/storage/diagrams/pirfenidone.png", "source_url": "https://pubchem.ncbi.nlm.nih.gov/compound/Pirfenidone", "molecule_hint": "Pirfenidone", "allow_osra": true, "notes": "PNG downloaded via PubChem PUG REST API"}
+{"diagram_id": "nintedanib-pubchem", "image_path": "crawler/storage/diagrams/nintedanib.png", "source_url": "https://pubchem.ncbi.nlm.nih.gov/compound/Nintedanib", "molecule_hint": "Nintedanib", "allow_osra": true, "notes": "PNG downloaded via PubChem PUG REST API"}

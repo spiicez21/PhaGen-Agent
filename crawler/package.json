@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@crawlee/basic": "3.9.2",
+    "cheerio": "^1.0.0-rc.12",
     "node-fetch": "3.3.2",
     "robots-parser": "3.0.1",
     "ts-node": "10.9.2"

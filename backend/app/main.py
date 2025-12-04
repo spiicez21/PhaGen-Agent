@@ -12,10 +12,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
+from .database import init_db
 from .routers import jobs as jobs_router
 
 settings = get_settings()
 app = FastAPI(title="PhaGen Agentic API")
+init_db()
 
 allowed_origins = {
     "http://localhost:3000",

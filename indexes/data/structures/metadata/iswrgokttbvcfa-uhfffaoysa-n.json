@@ -1,0 +1,19 @@
+{
+  "image_id": "iswrgokttbvcfa-uhfffaoysa-n",
+  "asset_path": "D:\\PhaGen-Agent\\indexes\\data\\structures\\images\\iswrgokttbvcfa-uhfffaoysa-n.svg",
+  "source_type": "smiles",
+  "source_reference": "Cc1ccc(=O)n(-c2ccccc2)c1",
+  "smiles": "Cc1ccc(=O)n(-c2ccccc2)c1",
+  "inchi": "InChI=1S/C12H11NO/c1-10-7-8-12(14)13(9-10)11-5-3-2-4-6-11/h2-9H,1H3",
+  "inchikey": "ISWRGOKTTBVCFA-UHFFFAOYSA-N",
+  "name": "",
+  "synonyms": [
+    "Cc1ccc(=O)n(-c2ccccc2)c1",
+    "ISWRGOKTTBVCFA-UHFFFAOYSA-N",
+    "InChI=1S/C12H11NO/c1-10-7-8-12(14)13(9-10)11-5-3-2-4-6-11/h2-9H,1H3",
+    "Pirfenidone"
+  ],
+  "generated_at": "2025-12-04T13:16:27.814717+00:00",
+  "license": "internal-use-only",
+  "origin": "indexes.render_structures"
+}

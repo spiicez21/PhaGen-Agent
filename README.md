@@ -7,10 +7,10 @@ PhaGen Agentic is a hackathon-ready, agentic multi-worker platform that compress
 | Area | State |
 | --- | --- |
 | Frontend | Basic Next.js scaffold with molecule input and job timeline placeholder |
-| Backend | FastAPI service with job orchestration endpoints and mock job store |
+| Backend | FastAPI service with job orchestration endpoints backed by Postgres persistence |
 | Agents | Master agent plus four worker stubs wired to deterministic mock data and RAG hooks |
-| Crawler | Crawlee TypeScript project with seed list + document normalization utilities |
-| Infra | Docker Compose file for local stack (Postgres, MinIO, Ollama, services) |
+| Crawler | Crawlee TypeScript project with seed list plus Section 5 normalization (boilerplate stripping, PII redaction, chunk metadata) |
+| Infra | Docker Compose file for local stack (Postgres, MinIO, Ollama, rdkit-service, services) |
 
 The MVP mirrors the implementation plan in `ignore.md`. Build phases are mapped to repo folders so each team can work in parallel.
 
@@ -48,6 +48,28 @@ The repo-level `requirements.txt` simply pulls in `backend/requirements.txt` and
    pip install -r requirements.txt
    uvicorn app.main:app --reload
    ```
+   Set the following environment variables (or update `.env`) before starting the API so SQLAlchemy can connect to Postgres:
+
+   ```bash
+   DATABASE_URL=postgresql+psycopg://phagen:phagen@localhost:5432/phagen
+   DATABASE_ECHO=false  # flip to true for SQL logging
+   ```
+   The default URL matches the `postgres` service in `infra/docker-compose.yml`. Update the value if you run Postgres elsewhere (e.g., managed cloud instance) or temporarily point it at `sqlite:///./phagen.db` when developing without a database container.
+
+   Object storage (MinIO/S3-compatible) powers raw document snapshots and archived PDF exports. Configure the backend with:
+
+   ```bash
+   STORAGE_PROVIDER=s3
+   S3_ENDPOINT_URL=http://localhost:9000
+   S3_REGION=us-east-1
+   S3_ACCESS_KEY=admin
+   S3_SECRET_KEY=phagen123
+   S3_USE_SSL=false
+   S3_RAW_DOCUMENTS_BUCKET=phagen-raw-documents
+   S3_REPORTS_BUCKET=phagen-report-artifacts
+   ```
+
+   These defaults align with the `minio` service in `infra/docker-compose.yml`; swap them for your own S3 bucket credentials in staging/production. Set `STORAGE_PROVIDER=none` if you want to skip uploads during local development.
 2. **Frontend**
    ```bash
    cd frontend
@@ -60,12 +82,26 @@ The repo-level `requirements.txt` simply pulls in `backend/requirements.txt` and
    npm install
    npm run crawl
    ```
-   After the crawler populates `crawler/storage/datasets/default`, switch back to the repo root and run the Python indexer:
+   After the crawler populates `crawler/storage/datasets/default`, optionally convert any scraped structure diagrams into SMILES via OSRA (only run this if the source license allows OCR). Flip the `allow_osra` flag inside `indexes/data/sample_diagrams.jsonl` or point to your own manifest:
    ```powershell
    cd D:\PhaGen-Agent
-   .\.venv\Scripts\python.exe indexes\build_index.py
+   .\.venv\Scripts\python.exe indexes\osra_pipeline.py --input indexes\data\sample_diagrams.jsonl --output indexes\data\osra_results.jsonl --manifest indexes\data\manifests\osra_results.manifest.json --osra-binary indexes\bin\osra-wsl.cmd --image-path-mode wsl --skip-missing
    ```
-   This writes embeddings to `indexes/chroma/` (git-ignored). Re-run the script any time new crawl output lands so FAISS/Chroma stays current.
+   The script enforces the `allow_osra` gate per record, hashes image assets, and emits JSONL plus a manifest under `indexes/data/manifests/` summarizing converted/skipped files. If you installed a native Windows OSRA binary you can drop the `--osra-binary/--image-path-mode` overrides; keep them when proxying through the provided WSL wrapper (`indexes/bin/osra-wsl.cmd`).
+
+   Next, canonicalize SMILES/InChI strings so synonyms stay consistent across runs:
+   ```powershell
+   cd D:\PhaGen-Agent
+   .\.venv\Scripts\python.exe indexes\smiles_normalizer.py --input indexes\data\sample_smiles.jsonl --output indexes\data\normalized_smiles.jsonl
+   ```
+   Swap the sample JSONL for your real payload (one molecule per line). The normalizer deduplicates molecules, snapshots manifests to `indexes/data/manifests/`, and in-place updates `synonyms` with canonical strings.
+
+   Once normalization finishes, switch back to the repo root and run the Python indexer:
+   ```powershell
+   cd D:\PhaGen-Agent
+   .\.venv\Scripts\python.exe indexes\build_index.py --structure-records indexes\data\normalized_smiles.jsonl
+   ```
+   This rebuilds the live retriever index at `indexes/chroma/`, reuses embeddings for unchanged passages via the on-disk cache at `indexes/.embedding_cache.json`, snapshots the run under `indexes/chroma_snapshots/`, **and** refreshes the RDKit structure catalog from `indexes/data/normalized_smiles.jsonl`. Structure SVGs + metadata land under `indexes/data/structures/{images,metadata}/` with a manifest at `indexes/data/structures/structures.manifest.json`, which workers/reports read at runtime. Each manifest entry now records the provenance schema (`image_id`, `source_type`, `source_ref`, `license`, `generated_at`) for downstream auditing. Pass `--no-structures` to skip the render step, or override the inputs via the `--structure-*` flags (records path, output dirs, manifest, width/height). Standard snapshot flags (`--cadence`, `--snapshot-name`, `--no-snapshot`, cache controls) still apply.
 
 ## Architecture overview
 
@@ -86,7 +122,7 @@ Each piece lives in its own directory but shares the same repo:
 - **Agents (`agents/`)** contain `MasterAgent`, shared `LLMClient`, synonym expansion, and four specialized workers. A structured payload powers both the UI and PDF renderer.
 - **Indexes (`indexes/`)** bundle the Chroma/FAISS build script so every crawl refresh can be re-indexed with one command.
 - **Crawler (`crawler/`)** is a Crawlee project that normalizes CT.gov, PubMed Central, FDA, and patent feeds into JSON ready for embedding.
-- **Infra (`infra/`)** holds Docker Compose wiring for Postgres, MinIO/S3-compatible storage, Ollama/OpenAI endpoints, frontend, and backend services.
+- **Infra (`infra/`)** holds Docker Compose wiring for Postgres, MinIO/S3-compatible storage, Ollama/OpenAI endpoints, frontend, backend services, and the new `rdkit-service` container that exposes SMILES → SVG/PNG rendering over HTTP.
 
 See `docs/architecture.md` for the full sequence diagram and responsibilities per component.
 
@@ -102,8 +138,10 @@ See `docs/architecture.md` for the full sequence diagram and responsibilities pe
 ## Data & indexing pipeline
 
 1. Run the Crawlee project to refresh datasets under `crawler/storage/`.
-2. Execute `indexes/build_index.py` from the repo root (inside `.venv`) to embed new passages into `indexes/chroma/`.
-3. Point the agents retriever at the fresh Chroma snapshot (default path already aligns with `indexes/chroma/`).
+2. **Optional / gated**: if you scraped structure diagrams and have explicit permission to OCR them, run `indexes/osra_pipeline.py --input <diagrams>.jsonl --output indexes/data/osra_results.jsonl --skip-missing`. The pipeline enforces the `allow_osra` flag per record, hashes input files, snapshots successes/skips to a manifest under `indexes/data/manifests/`, and emits JSONL records that can be merged into downstream SMILES lists.
+3. Canonicalize SMILES/InChI inputs with `indexes/smiles_normalizer.py --input <raw>.jsonl --output indexes/data/normalized_smiles.jsonl` so downstream synonym expansion and retrievers reference the same canonical strings (manifests land under `indexes/data/manifests/`). Use the OSRA output JSONL as one of the normalizer inputs when diagrams need to feed synonyms.
+4. Execute `indexes/build_index.py` from the repo root (inside `.venv`) to embed new passages into `indexes/chroma/`, reusing cached embeddings where possible, deduplicating overlapping clinical/literature passages (clinical wins by priority), emitting a daily snapshot under `indexes/chroma_snapshots/`, **and** regenerating the RDKit structure catalog + manifest from `indexes/data/normalized_smiles.jsonl` (disable with `--no-structures`).
+5. Agents read from `indexes/chroma/` by default; to reproduce a historical run, copy or point the retriever at the desired snapshot folder (each includes a `manifest.json` with dataset hash + git commit).
 4. Redeploy/restart workers if the embeddings or retriever settings change so new sources are picked up.
 
 This API-first crawl honors robots.txt (see `crawler/src/robots.ts`) and caps page fragments at 5 KB before indexing. Extend the schema if you add new corpora.
@@ -119,6 +157,25 @@ This API-first crawl honors robots.txt (see `crawler/src/robots.ts`) and caps pa
 - Every evidence snippet now receives a deterministic ID (e.g., `clinical-1`) when the master agent serializes results.
 - The innovation story is split into sentence-level claims, each linked to one or more evidence IDs; the payload exposes this under `validation` with pass/fail status plus linked counts.
 - `/comparison`, `/results`, and the PDF report highlight the validation summary so reviewers can confirm every claim is grounded before sharing deliverables.
+
+## Operational data model
+
+The backend now persists job lifecycles to Postgres via SQLAlchemy models created at startup:
+
+- `molecules` — canonical molecule entries (name, SMILES, synonyms) shared by every job submission.
+- `jobs` — orchestration records that track status, serialized payloads, recommendations, and monotonic report versions per molecule.
+- `documents` — flattened evidence metadata per worker result (source worker, URL, evidence ID) for each completed job.
+- `passages` — normalized snippets tied to the documents table, storing the supporting text and confidence per citation.
+- `reports` — structured innovation story payloads alongside their report version, ready for future PDF/JSON export diffs.
+
+Tables are created automatically by `app.database.init_db()` when Uvicorn boots. Point `DATABASE_URL` at your desired Postgres instance and the ORM will create or upgrade the schema as needed (use Alembic for future migrations once the schema stabilizes).
+
+## Object storage & artifacts
+
+- Raw structured job payloads are snapshotted to the `S3_RAW_DOCUMENTS_BUCKET` (default `phagen-raw-documents`) every time a job finishes. Files land under `jobs/{job_id}/raw/<timestamp>.json` so you can diff payloads over time or replay them through downstream pipelines.
+- Generated PDF exports are uploaded to the `S3_REPORTS_BUCKET` (default `phagen-report-artifacts`) when the `/api/jobs/{id}/report.pdf` endpoint is called; keys follow `jobs/{job_id}/reports/v{version}-<timestamp>.pdf`.
+- Uploads target whatever endpoint/credentials you configure (MinIO via Docker Compose or a real S3 bucket). If MinIO/S3 is unreachable, uploads are skipped but the API still returns the PDF/JSON; check the backend logs for warnings.
+- Bucket names, credentials, and endpoints are controlled via environment variables documented in the quick start section, allowing you to point dev, staging, and prod environments at different storage accounts.
 
 ### Windows PDF prerequisites
 
@@ -136,7 +193,15 @@ If PDF export fails, the backend raises a runtime error that tells you whether `
 - `backend/requirements.txt` now includes `rdkit-pypi==2022.9.5` plus `onnxruntime` (Chroma’s ONNX embeddings). Re-run `pip install -r backend/requirements.txt` inside the repo `.venv` after pulling these changes.
 - RDKit renders SMILES strings to SVG during job completion and stores the assets under `backend/app/report_assets/reports/images/structures/` by default, with a paired provenance JSON alongside in `.../metadata/`. Override the storage root by setting the `REPORT_ASSETS_DIR` environment variable before starting Uvicorn if you want the SVGs/PDF snippets to land elsewhere (e.g., shared storage or mounted volume).
 - Each completed job now carries a `payload.structure` block containing `{ svg, path, metadata_path, smiles, source_type, source_reference, image_id, generated_at, error }`. The frontend consumes this metadata to display the molecule preview, and the PDF exporter embeds the same SVG inline while surfacing the provenance trail.
+- `infra/docker-compose.yml` now includes `rdkit-service`, a lightweight FastAPI container running RDKit via Conda. Start it with `docker compose up rdkit-service` (or include it in `docker compose up`). Hit `http://localhost:8081/render` with `{ "smiles": "CC(=O)O", "format": "svg" }` to fetch SVG/PNG payloads; the backend reads the URL from `RDKIT_SERVICE_URL`.
 - After installing/upgrading RDKit, restart the backend (`uvicorn app.main:app --reload`) to ensure the new dependency and environment variables are picked up and new jobs generate structure previews automatically.
+
+### OSRA diagram OCR (optional)
+
+- Install the OSRA CLI on the host where you plan to run diagram OCR. The binary is available via Homebrew (`brew install osra`), Conda (`conda install -c conda-forge osra`), or by building from [source](https://github.com/Novartis/osra). On Windows, install OSRA inside WSL (`sudo apt install osra`) and use the provided wrapper `indexes/bin/osra-wsl.cmd` plus `--image-path-mode wsl`, or provide the absolute path to a native Windows binary with `--osra-binary`.
+- Populate a JSONL manifest (see `indexes/data/sample_diagrams.jsonl`) with `diagram_id`, `image_path`, metadata, and an explicit `allow_osra` flag per record. Only assets with `allow_osra: true` will be processed, so you can safely keep restricted diagrams in the manifest without risking violations.
+- Run `python indexes/osra_pipeline.py --input <manifest>.jsonl --output indexes/data/osra_results.jsonl --skip-missing`. When invoking through WSL, pass `--osra-binary indexes/bin/osra-wsl.cmd --image-path-mode wsl`; supply `--extra-osra-args` if you need to adjust resolution or language packs, and use `--base-dir` when image paths are relative to another folder.
+- Each run emits JSONL plus a manifest under `indexes/data/manifests/` summarizing conversions, skips, and failures. Feed the output JSONL into `smiles_normalizer.py` (or merge it with crawler-sourced SMILES) before synonym expansion and indexing.
 
 ## Comparison workspace
 
@@ -147,5 +212,7 @@ If PDF export fails, the backend raises a runtime error that tells you whether `
 ## Crawling & compliance
 
 - The crawler now follows an **API-first → robots.txt-validated crawl** pipeline. Each source tries to load mock API data first (`crawler/mock-data/`), then falls back to HTML only if `robots.txt` allows access.
+- Section 5 normalization now strips boilerplate, redacts simple PII, and emits deterministic chunk metadata (chunk ID, char spans, redaction counters) via `crawler/src/normalize.ts` before datasets reach the indexer.
+- Domain-level crawl budgets cap HTML fetches per host (default 2 pages unless overridden in `crawler/src/index.ts`) and annotate dataset entries when a source is skipped due to quota exhaustion.
 - `crawler/src/robots.ts` caches per-domain policies (allow/deny + crawl-delay) using the `PhaGenBot/1.0` user agent. Update the user agent or contact email there before running against live sites.
 - Crawled artifacts are written to `crawler/storage/` (ignored by git) and capped at 5 KB snippets for safety. Extend the schema before indexing into FAISS/Chroma.

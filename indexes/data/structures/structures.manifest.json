@@ -1,0 +1,37 @@
+{
+  "generated_at": "2025-12-04T13:16:27.819718+00:00",
+  "input": "D:\\PhaGen-Agent\\indexes\\data\\normalized_smiles.jsonl",
+  "output_dir": "D:\\PhaGen-Agent\\indexes\\data\\structures\\images",
+  "metadata_dir": "D:\\PhaGen-Agent\\indexes\\data\\structures\\metadata",
+  "entries": [
+    {
+      "image_id": "iswrgokttbvcfa-uhfffaoysa-n",
+      "name": "",
+      "canonical_smiles": "Cc1ccc(=O)n(-c2ccccc2)c1",
+      "canonical_inchi": "InChI=1S/C12H11NO/c1-10-7-8-12(14)13(9-10)11-5-3-2-4-6-11/h2-9H,1H3",
+      "inchikey": "ISWRGOKTTBVCFA-UHFFFAOYSA-N",
+      "svg_path": "images\\iswrgokttbvcfa-uhfffaoysa-n.svg",
+      "metadata_path": "metadata\\iswrgokttbvcfa-uhfffaoysa-n.json",
+      "generated_at": "2025-12-04T13:16:27.814717+00:00",
+      "source_type": "smiles",
+      "source_ref": "Cc1ccc(=O)n(-c2ccccc2)c1",
+      "license": "internal-use-only"
+    },
+    {
+      "image_id": "cpmdpsxjelvgjg-uudcscgesa-n",
+      "name": "",
+      "canonical_smiles": "COC(=O)c1ccc2c(/C(=N/c3ccc(N(C)C(=O)CN4CCN(C)CC4)cc3)c3ccccc3)c(O)[nH]c2c1",
+      "canonical_inchi": "InChI=1S/C31H33N5O4/c1-34-15-17-36(18-16-34)20-27(37)35(2)24-12-10-23(11-13-24)32-29(21-7-5-4-6-8-21)28-25-14-9-22(31(39)40-3)19-26(25)33-30(28)38/h4-14,19,33,38H,15-18,20H2,1-3H3/b32-29+",
+      "inchikey": "CPMDPSXJELVGJG-UUDCSCGESA-N",
+      "svg_path": "images\\cpmdpsxjelvgjg-uudcscgesa-n.svg",
+      "metadata_path": "metadata\\cpmdpsxjelvgjg-uudcscgesa-n.json",
+      "generated_at": "2025-12-04T13:16:27.818716+00:00",
+      "source_type": "smiles",
+      "source_ref": "COC(=O)c1ccc2c(/C(=N/c3ccc(N(C)C(=O)CN4CCN(C)CC4)cc3)c3ccccc3)c(O)[nH]c2c1",
+      "license": "internal-use-only"
+    }
+  ],
+  "failures": [],
+  "processed": 2,
+  "rendered": 2
+}

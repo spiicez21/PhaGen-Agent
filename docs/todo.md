@@ -43,6 +43,20 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - Saved-run workspace lists molecules with status/recommendation, quick open, and PDF download actions.
 - Crawler status console and dataset/index manager expose queue metrics, robots summaries, rebuild, and purge controls.
 
+### Data & infra follow-ups
+- Postgres schema now covers `molecules`, `jobs`, `documents`, `passages`, and `reports`, and the FastAPI backend persists jobs plus evidence into the database via SQLAlchemy models.
+- MinIO/S3 wiring now stores raw job payloads and generated PDF artifacts via the new object storage client, with configurable buckets and docker-compose defaults.
+- Crawlee normalization pipeline now strips boilerplate, redacts PII, and chunks sources into metadata-rich passages per Section 5 guidance, feeding indexes with deterministic chunk IDs + redaction stats.
+- Index snapshotter now runs via `indexes/build_index.py` (daily by default, monthly optional) and writes timestamped copies with manifests (dataset hash, git commit, record counts) under `indexes/chroma_snapshots/` while keeping the live retriever under `indexes/chroma/`.
+- Embedding cache now stores MiniLM vectors keyed by doc hash in `indexes/.embedding_cache.json`, letting the index builder reuse embeddings for unchanged passages and only encode the delta.
+- Domain-level crawl budgets now cap HTML fetches per host (default 2 unless overridden), log usage, and annotate dataset entries when a source is skipped for exceeding its quota.
+- Evidence deduplication now drops lower-priority duplicates between clinical and literature corpora (clinical wins), annotating kept/dropped entries via `metadata.dedup` and surfacing stats inside snapshot manifests.
+- RDKit rendering now has a dedicated `rdkit-service` container (Conda + RDKit + Pillow + FastAPI) wired into `docker-compose.yml` for on-demand SMILES → SVG/PNG rendering via `POST /render`.
+- SMILES normalizer job (`python indexes/smiles_normalizer.py`) canonicalizes SMILES/InChI inputs via RDKit, dedupes aliases, and emits JSONL + manifest files before indexing and synonym expansion.
+- Optional OSRA pipeline (`python indexes/osra_pipeline.py`) walks approved structure diagrams, enforces `allow_osra` gates, hashes image artifacts, converts diagrams to SMILES via the OSRA CLI, and emits JSONL + manifest outputs for downstream normalization.
+- RDKit structure rendering now runs automatically inside `indexes/build_index.py`, consuming `indexes/data/normalized_smiles.jsonl`, emitting SVG/metadata assets + manifests under `indexes/data/structures/`, and wiring summary stats into snapshot manifests so workers/reports can reuse the catalog without re-rendering.
+- Structure manifest entries now carry full provenance metadata (`image_id`, `source_type`, `source_ref`, `license`, `generated_at`) so downstream workers/reports can trace each asset.
+
 ## 🔜 Pending
 ### Phase UI — Experience & admin
 - [ ] Implement stretch visualizations (knowledge graph, citation trace, molecule comparison) after MVP.
@@ -52,20 +66,6 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - [ ] Visual diff viewer to compare report versions (V1 vs V2 changes).
 - [ ] Molecule structure viewer component (SVG viewer + zoom + download) powered by RDKit-generated SVGs.
 - [ ] Add "Request structure" action in molecule intake to create SMILES → RDKit render.
-
-### Data & infra follow-ups
-- [ ] Flesh out Postgres schema (`molecules`, `jobs`, `documents`, `passages`, `reports`) and wire persistence into backend.
-- [ ] Add MinIO/S3 storage wiring for raw documents and PDF artifacts.
-- [ ] Extend crawler normalization (chunking, boilerplate stripping, PII redaction) per Section 5 guidance.
-- [ ] Index snapshotting cadence (daily/monthly builds) for reproducibility.
-- [ ] Embedding cache to avoid re-embedding unchanged passages.
-- [ ] Domain-level crawl budgets to limit pages per source.
-- [ ] Evidence deduplication across clinical/literature corpora.
-- [ ] Add `rdkit-service` Docker image (conda + rdkit + pillow) to `docker-compose.yml` for on-demand rendering.
-- [ ] Add `smiles-normalizer` job that canonicalizes SMILES/InChI via RDKit before indexing/synonym expansion.
-- [ ] Add optional OSRA image pipeline for OCR-to-SMILES conversion of scraped diagrams (only when allowed).
-- [ ] Hook RDKit rendering into indexes and reports pipelines so structure images are available to workers.
-- [ ] Image provenance schema storing `image_id`, `source_type` (rdkit/pubchem/scrape), `source_ref` (SMILES/URL/CID), license, and `generated_at`.
 
 ### Quality, guardrails, and ops
 - [ ] Implement retrieval precision checks / coverage metrics plus guardrails (evidence thresholds, anomaly detection).
