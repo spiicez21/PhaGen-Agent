@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -44,6 +44,6 @@ class JobResponse(BaseModel):
     status: JobStatus
     created_at: datetime
     updated_at: datetime
-    payload: Dict[str, dict] | None = None
+    payload: Dict[str, Any] | None = None
     recommendation: Optional[Recommendation] = None
     report_version: Optional[int] = None
