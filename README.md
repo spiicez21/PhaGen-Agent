@@ -7,7 +7,7 @@ PhaGen Agentic is a hackathon-ready, agentic multi-worker platform that compress
 | Area | State |
 | --- | --- |
 | Frontend | Basic Next.js scaffold with molecule input and job timeline placeholder |
-| Backend | FastAPI service with job orchestration endpoints and mock job store |
+| Backend | FastAPI service with job orchestration endpoints backed by Postgres persistence |
 | Agents | Master agent plus four worker stubs wired to deterministic mock data and RAG hooks |
 | Crawler | Crawlee TypeScript project with seed list + document normalization utilities |
 | Infra | Docker Compose file for local stack (Postgres, MinIO, Ollama, services) |
@@ -48,6 +48,13 @@ The repo-level `requirements.txt` simply pulls in `backend/requirements.txt` and
    pip install -r requirements.txt
    uvicorn app.main:app --reload
    ```
+   Set the following environment variables (or update `.env`) before starting the API so SQLAlchemy can connect to Postgres:
+
+   ```bash
+   DATABASE_URL=postgresql+psycopg://phagen:phagen@localhost:5432/phagen
+   DATABASE_ECHO=false  # flip to true for SQL logging
+   ```
+   The default URL matches the `postgres` service in `infra/docker-compose.yml`. Update the value if you run Postgres elsewhere (e.g., managed cloud instance) or temporarily point it at `sqlite:///./phagen.db` when developing without a database container.
 2. **Frontend**
    ```bash
    cd frontend
@@ -119,6 +126,18 @@ This API-first crawl honors robots.txt (see `crawler/src/robots.ts`) and caps pa
 - Every evidence snippet now receives a deterministic ID (e.g., `clinical-1`) when the master agent serializes results.
 - The innovation story is split into sentence-level claims, each linked to one or more evidence IDs; the payload exposes this under `validation` with pass/fail status plus linked counts.
 - `/comparison`, `/results`, and the PDF report highlight the validation summary so reviewers can confirm every claim is grounded before sharing deliverables.
+
+## Operational data model
+
+The backend now persists job lifecycles to Postgres via SQLAlchemy models created at startup:
+
+- `molecules` — canonical molecule entries (name, SMILES, synonyms) shared by every job submission.
+- `jobs` — orchestration records that track status, serialized payloads, recommendations, and monotonic report versions per molecule.
+- `documents` — flattened evidence metadata per worker result (source worker, URL, evidence ID) for each completed job.
+- `passages` — normalized snippets tied to the documents table, storing the supporting text and confidence per citation.
+- `reports` — structured innovation story payloads alongside their report version, ready for future PDF/JSON export diffs.
+
+Tables are created automatically by `app.database.init_db()` when Uvicorn boots. Point `DATABASE_URL` at your desired Postgres instance and the ORM will create or upgrade the schema as needed (use Alembic for future migrations once the schema stabilizes).
 
 ### Windows PDF prerequisites
 

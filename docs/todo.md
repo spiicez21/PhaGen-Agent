@@ -43,6 +43,9 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - Saved-run workspace lists molecules with status/recommendation, quick open, and PDF download actions.
 - Crawler status console and dataset/index manager expose queue metrics, robots summaries, rebuild, and purge controls.
 
+### Data & infra follow-ups
+- Postgres schema now covers `molecules`, `jobs`, `documents`, `passages`, and `reports`, and the FastAPI backend persists jobs plus evidence into the database via SQLAlchemy models.
+
 ## 🔜 Pending
 ### Phase UI — Experience & admin
 - [ ] Implement stretch visualizations (knowledge graph, citation trace, molecule comparison) after MVP.
@@ -54,7 +57,6 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - [ ] Add "Request structure" action in molecule intake to create SMILES → RDKit render.
 
 ### Data & infra follow-ups
-- [ ] Flesh out Postgres schema (`molecules`, `jobs`, `documents`, `passages`, `reports`) and wire persistence into backend.
 - [ ] Add MinIO/S3 storage wiring for raw documents and PDF artifacts.
 - [ ] Extend crawler normalization (chunking, boilerplate stripping, PII redaction) per Section 5 guidance.
 - [ ] Index snapshotting cadence (daily/monthly builds) for reproducibility.

@@ -4,7 +4,8 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Response
 
 from ..chemistry import build_structure_payload
 from ..config import get_settings
-from ..jobs import InMemoryJobStore
+from ..database import SessionLocal
+from ..jobs import InMemoryJobStore, PostgresJobStore
 from ..reporting import generate_report_pdf
 from ..schemas import JobCreateRequest, JobResponse, JobStatus
 
@@ -17,7 +18,11 @@ except ModuleNotFoundError as exc:  # pragma: no cover
 
 settings = get_settings()
 router = APIRouter(prefix=f"{settings.api_prefix}/jobs", tags=["jobs"])
-job_store = InMemoryJobStore(ttl_minutes=settings.job_ttl_minutes)
+
+try:
+    job_store = PostgresJobStore(SessionLocal, ttl_minutes=settings.job_ttl_minutes)
+except Exception:  # pragma: no cover - fallback when DB misconfigured
+    job_store = InMemoryJobStore(ttl_minutes=settings.job_ttl_minutes)
 master_agent = MasterAgent(top_k=settings.rag_top_k)
 
 
@@ -67,6 +72,7 @@ def _run_job(job_id: str, payload: JobCreateRequest) -> None:
             recommendation=result.output.recommendation,
             report_version=version,
         )
+        job_store.persist_artifacts(job_id, serialized, version)
     except Exception as exc:  # pragma: no cover - logging stub
         job_store.update_job(
             job_id,

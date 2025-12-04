@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Dict
+from typing import Callable, Dict, Iterable, Optional
 from uuid import uuid4
 
+from sqlalchemy import delete, func, select
+from sqlalchemy.orm import Session
+
+from .models import Document, Job as JobModel, Molecule, Passage, Report
 from .schemas import JobCreateRequest, JobResponse, JobStatus
 
 
@@ -57,3 +61,151 @@ class InMemoryJobStore:
         ]
         for job_id in expired:
             self._jobs.pop(job_id, None)
+
+    def persist_artifacts(self, job_id: str, payload: dict, report_version: int | None) -> None:
+        return None
+
+
+class PostgresJobStore:
+    def __init__(self, session_factory: Callable[[], Session], ttl_minutes: int = 60) -> None:
+        self._session_factory = session_factory
+        self._ttl = timedelta(minutes=ttl_minutes)
+
+    def _session(self) -> Session:
+        return self._session_factory()
+
+    def create_job(self, payload: JobCreateRequest) -> JobResponse:
+        with self._session() as session:
+            molecule = self._get_or_create_molecule(session, payload)
+            now = datetime.utcnow()
+            job = JobModel(
+                id=str(uuid4()),
+                molecule_id=molecule.id,
+                status=JobStatus.pending.value,
+                created_at=now,
+                updated_at=now,
+            )
+            session.add(job)
+            session.commit()
+            session.refresh(job)
+            return self._to_response(job)
+
+    def update_job(self, job_id: str, **kwargs) -> JobResponse:
+        with self._session() as session:
+            job = self._get_job_or_error(session, job_id)
+            for key, value in kwargs.items():
+                if not hasattr(job, key):
+                    continue
+                if key == "status" and isinstance(value, JobStatus):
+                    setattr(job, key, value.value)
+                    continue
+                setattr(job, key, value)
+            job.updated_at = datetime.utcnow()
+            session.add(job)
+            session.commit()
+            session.refresh(job)
+            return self._to_response(job)
+
+    def assign_report_version(self, job_id: str, molecule: str | None) -> int:
+        with self._session() as session:
+            job = self._get_job_or_error(session, job_id)
+            max_version: Optional[int] = session.scalar(
+                select(func.max(JobModel.report_version)).where(
+                    JobModel.molecule_id == job.molecule_id
+                )
+            )
+            job.report_version = (max_version or 0) + 1
+            job.updated_at = datetime.utcnow()
+            session.commit()
+            return job.report_version
+
+    def get_job(self, job_id: str) -> JobResponse:
+        with self._session() as session:
+            job = self._get_job_or_error(session, job_id)
+            return self._to_response(job)
+
+    def sweep(self) -> None:
+        threshold = datetime.utcnow() - self._ttl
+        with self._session() as session:
+            session.execute(
+                delete(JobModel).where(
+                    JobModel.updated_at < threshold,
+                    JobModel.status != JobStatus.running.value,
+                )
+            )
+            session.commit()
+
+    def persist_artifacts(self, job_id: str, payload: dict, report_version: int | None) -> None:
+        workers = payload.get("workers") or {}
+        with self._session() as session:
+            job = self._get_job_or_error(session, job_id)
+
+            subquery = select(Document.id).where(Document.job_id == job_id).scalar_subquery()
+            session.execute(delete(Passage).where(Passage.document_id.in_(subquery)))
+            session.execute(delete(Document).where(Document.job_id == job_id))
+            session.execute(delete(Report).where(Report.job_id == job_id))
+
+            for worker_name, worker_payload in workers.items():
+                evidence_list: Iterable[dict] = worker_payload.get("evidence", []) or []
+                for record in evidence_list:
+                    document = Document(
+                        job_id=job_id,
+                        source=worker_name,
+                        document_type=str(record.get("type") or "evidence"),
+                        url=record.get("url"),
+                        meta={
+                            "evidence_id": record.get("evidence_id"),
+                            "confidence": record.get("confidence"),
+                        },
+                    )
+                    session.add(document)
+                    session.flush()
+                    passage = Passage(
+                        document_id=document.id,
+                        text=str(record.get("text") or ""),
+                        confidence=record.get("confidence"),
+                        meta={"worker": worker_name},
+                    )
+                    session.add(passage)
+
+            report = Report(
+                job_id=job_id,
+                molecule_id=job.molecule_id,
+                version=report_version or job.report_version or 1,
+                payload=payload,
+            )
+            session.add(report)
+            session.commit()
+
+    def _get_or_create_molecule(self, session: Session, payload: JobCreateRequest) -> Molecule:
+        name = payload.molecule.strip()
+        stmt = select(Molecule).where(func.lower(Molecule.name) == name.lower())
+        molecule = session.scalar(stmt)
+        if molecule:
+            return molecule
+
+        molecule = Molecule(
+            name=name,
+            smiles=payload.smiles,
+            synonyms=payload.synonyms or [],
+        )
+        session.add(molecule)
+        session.flush()
+        return molecule
+
+    def _get_job_or_error(self, session: Session, job_id: str) -> JobModel:
+        job = session.get(JobModel, job_id)
+        if not job:
+            raise KeyError(job_id)
+        return job
+
+    def _to_response(self, job: JobModel) -> JobResponse:
+        return JobResponse(
+            job_id=job.id,
+            status=JobStatus(job.status),
+            created_at=job.created_at,
+            updated_at=job.updated_at,
+            payload=job.payload,
+            recommendation=job.recommendation,
+            report_version=job.report_version,
+        )
