@@ -82,7 +82,14 @@ The repo-level `requirements.txt` simply pulls in `backend/requirements.txt` and
    npm install
    npm run crawl
    ```
-   After the crawler populates `crawler/storage/datasets/default`, switch back to the repo root and run the Python indexer:
+   After the crawler populates `crawler/storage/datasets/default`, canonicalize SMILES/InChI strings so synonyms stay consistent across runs:
+   ```powershell
+   cd D:\PhaGen-Agent
+   .\.venv\Scripts\python.exe indexes\smiles_normalizer.py --input indexes\data\sample_smiles.jsonl --output indexes\data\normalized_smiles.jsonl
+   ```
+   Swap the sample JSONL for your real payload (one molecule per line). The normalizer deduplicates molecules, snapshots manifests to `indexes/data/manifests/`, and in-place updates `synonyms` with canonical strings.
+
+   Once normalization finishes, switch back to the repo root and run the Python indexer:
    ```powershell
    cd D:\PhaGen-Agent
    .\.venv\Scripts\python.exe indexes\build_index.py
@@ -124,7 +131,8 @@ See `docs/architecture.md` for the full sequence diagram and responsibilities pe
 ## Data & indexing pipeline
 
 1. Run the Crawlee project to refresh datasets under `crawler/storage/`.
-2. Execute `indexes/build_index.py` from the repo root (inside `.venv`) to embed new passages into `indexes/chroma/`, reusing cached embeddings where possible, deduplicating overlapping clinical/literature passages (clinical wins by priority), and emitting a daily snapshot under `indexes/chroma_snapshots/`.
+2. Canonicalize SMILES/InChI inputs with `indexes/smiles_normalizer.py --input <raw>.jsonl --output indexes/data/normalized_smiles.jsonl` so downstream synonym expansion and retrievers reference the same canonical strings (manifests land under `indexes/data/manifests/`).
+3. Execute `indexes/build_index.py` from the repo root (inside `.venv`) to embed new passages into `indexes/chroma/`, reusing cached embeddings where possible, deduplicating overlapping clinical/literature passages (clinical wins by priority), and emitting a daily snapshot under `indexes/chroma_snapshots/`.
 3. Agents read from `indexes/chroma/` by default; to reproduce a historical run, copy or point the retriever at the desired snapshot folder (each includes a `manifest.json` with dataset hash + git commit).
 4. Redeploy/restart workers if the embeddings or retriever settings change so new sources are picked up.
 
