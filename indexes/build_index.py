@@ -40,6 +40,10 @@ DATASET_DIR = Path(__file__).resolve().parents[1] / "crawler" / "storage" / "dat
 PERSIST_DIR = BASE_DIR / "chroma"
 SNAPSHOT_ROOT = BASE_DIR / "chroma_snapshots"
 EMBED_CACHE_PATH = BASE_DIR / ".embedding_cache.json"
+STRUCTURE_INPUT = BASE_DIR / "data" / "normalized_smiles.jsonl"
+STRUCTURE_IMAGES_DIR = BASE_DIR / "data" / "structures" / "images"
+STRUCTURE_METADATA_DIR = BASE_DIR / "data" / "structures" / "metadata"
+STRUCTURE_MANIFEST = BASE_DIR / "data" / "structures" / "structures.manifest.json"
 COLLECTION_NAME = "phagen-agentic"
 MANIFEST_NAME = "manifest.json"
 EMBED_MODEL_NAME = "all-MiniLM-L6-v2"
@@ -107,6 +111,47 @@ def parse_args() -> argparse.Namespace:
         "--no-cache",
         action="store_true",
         help="Disable embedding cache reuse (always re-embed)",
+    )
+    parser.add_argument(
+        "--no-structures",
+        action="store_true",
+        help="Skip RDKit structure rendering/catalog refresh",
+    )
+    parser.add_argument(
+        "--structure-records",
+        type=Path,
+        default=STRUCTURE_INPUT,
+        help="Canonical SMILES JSONL feeding the structure catalog (default: indexes/data/normalized_smiles.jsonl)",
+    )
+    parser.add_argument(
+        "--structure-output-dir",
+        type=Path,
+        default=STRUCTURE_IMAGES_DIR,
+        help="Directory for rendered SVG assets",
+    )
+    parser.add_argument(
+        "--structure-metadata-dir",
+        type=Path,
+        default=STRUCTURE_METADATA_DIR,
+        help="Directory for per-structure metadata JSON files",
+    )
+    parser.add_argument(
+        "--structure-manifest",
+        type=Path,
+        default=STRUCTURE_MANIFEST,
+        help="Manifest JSON describing all rendered structures",
+    )
+    parser.add_argument(
+        "--structure-width",
+        type=int,
+        default=420,
+        help="Width of rendered SVGs (default: 420)",
+    )
+    parser.add_argument(
+        "--structure-height",
+        type=int,
+        default=320,
+        help="Height of rendered SVGs (default: 320)",
     )
     return parser.parse_args()
 
@@ -432,6 +477,41 @@ def cleanup_snapshots(keep_daily: int, keep_monthly: int) -> list[str]:
     return removed
 
 
+def maybe_render_structures(args: argparse.Namespace) -> dict | None:
+    if args.no_structures:
+        return None
+
+    records_path = (args.structure_records or STRUCTURE_INPUT).resolve()
+    if not records_path.exists():
+        print(f"Structure records file {records_path} not found; skipping structure catalog refresh.")
+        return None
+
+    try:
+        from structure_renderer import StructureRenderConfig, render_structure_catalog
+    except Exception as exc:  # noqa: BLE001
+        print(f"Skipping structure rendering because structure_renderer could not load: {exc}")
+        return None
+
+    config = StructureRenderConfig(
+        input_path=records_path,
+        output_dir=(args.structure_output_dir or STRUCTURE_IMAGES_DIR).resolve(),
+        metadata_dir=(args.structure_metadata_dir or STRUCTURE_METADATA_DIR).resolve(),
+        manifest_path=(args.structure_manifest or STRUCTURE_MANIFEST).resolve(),
+        width=args.structure_width,
+        height=args.structure_height,
+    )
+    try:
+        summary = render_structure_catalog(config)
+    except Exception as exc:  # noqa: BLE001
+        print(f"Structure rendering failed: {exc}")
+        return None
+
+    print(
+        f"Rendered {summary['rendered']} structure(s) into {config.output_dir} (manifest {summary['manifest']})."
+    )
+    return summary
+
+
 def main() -> None:
     args = parse_args()
     dataset_dir = args.dataset.resolve()
@@ -448,6 +528,8 @@ def main() -> None:
 
     if cache and not args.no_cache:
         cache.save()
+
+    structure_summary = maybe_render_structures(args)
 
     if args.no_snapshot:
         return
@@ -470,6 +552,8 @@ def main() -> None:
         "git_commit": current_git_commit(),
         "embedding_model": EMBED_MODEL_NAME,
     }
+    if structure_summary:
+        manifest["structures"] = structure_summary
     write_manifest(snapshot_dir, manifest)
     print(f"Snapshot '{resolved_name}' saved under {snapshot_dir}")
 

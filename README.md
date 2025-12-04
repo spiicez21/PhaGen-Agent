@@ -99,9 +99,9 @@ The repo-level `requirements.txt` simply pulls in `backend/requirements.txt` and
    Once normalization finishes, switch back to the repo root and run the Python indexer:
    ```powershell
    cd D:\PhaGen-Agent
-   .\.venv\Scripts\python.exe indexes\build_index.py
+   .\.venv\Scripts\python.exe indexes\build_index.py --structure-records indexes\data\normalized_smiles.jsonl
    ```
-   This rebuilds the live retriever index at `indexes/chroma/`, reuses embeddings for unchanged passages via the on-disk cache at `indexes/.embedding_cache.json`, and snapshots the run under `indexes/chroma_snapshots/` using a daily timestamp. Use `--cadence monthly` or `--snapshot-name my-run` for custom folders, `--no-snapshot` to skip copies, and `--no-cache`/`--cache-path` if you need to bypass or relocate the embedding cache.
+   This rebuilds the live retriever index at `indexes/chroma/`, reuses embeddings for unchanged passages via the on-disk cache at `indexes/.embedding_cache.json`, snapshots the run under `indexes/chroma_snapshots/`, **and** refreshes the RDKit structure catalog from `indexes/data/normalized_smiles.jsonl`. Structure SVGs + metadata land under `indexes/data/structures/{images,metadata}/` with a manifest at `indexes/data/structures/structures.manifest.json`, which workers/reports read at runtime. Pass `--no-structures` to skip the render step, or override the inputs via the `--structure-*` flags (records path, output dirs, manifest, width/height). Standard snapshot flags (`--cadence`, `--snapshot-name`, `--no-snapshot`, cache controls) still apply.
 
 ## Architecture overview
 
@@ -140,7 +140,7 @@ See `docs/architecture.md` for the full sequence diagram and responsibilities pe
 1. Run the Crawlee project to refresh datasets under `crawler/storage/`.
 2. **Optional / gated**: if you scraped structure diagrams and have explicit permission to OCR them, run `indexes/osra_pipeline.py --input <diagrams>.jsonl --output indexes/data/osra_results.jsonl --skip-missing`. The pipeline enforces the `allow_osra` flag per record, hashes input files, snapshots successes/skips to a manifest under `indexes/data/manifests/`, and emits JSONL records that can be merged into downstream SMILES lists.
 3. Canonicalize SMILES/InChI inputs with `indexes/smiles_normalizer.py --input <raw>.jsonl --output indexes/data/normalized_smiles.jsonl` so downstream synonym expansion and retrievers reference the same canonical strings (manifests land under `indexes/data/manifests/`). Use the OSRA output JSONL as one of the normalizer inputs when diagrams need to feed synonyms.
-4. Execute `indexes/build_index.py` from the repo root (inside `.venv`) to embed new passages into `indexes/chroma/`, reusing cached embeddings where possible, deduplicating overlapping clinical/literature passages (clinical wins by priority), and emitting a daily snapshot under `indexes/chroma_snapshots/`.
+4. Execute `indexes/build_index.py` from the repo root (inside `.venv`) to embed new passages into `indexes/chroma/`, reusing cached embeddings where possible, deduplicating overlapping clinical/literature passages (clinical wins by priority), emitting a daily snapshot under `indexes/chroma_snapshots/`, **and** regenerating the RDKit structure catalog + manifest from `indexes/data/normalized_smiles.jsonl` (disable with `--no-structures`).
 5. Agents read from `indexes/chroma/` by default; to reproduce a historical run, copy or point the retriever at the desired snapshot folder (each includes a `manifest.json` with dataset hash + git commit).
 4. Redeploy/restart workers if the embeddings or retriever settings change so new sources are picked up.
 
