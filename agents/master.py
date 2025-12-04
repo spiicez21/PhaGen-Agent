@@ -140,15 +140,136 @@ class MasterAgent:
     def _fallback_story(
         self, molecule: str, worker_outputs: Dict[str, WorkerResult]
     ) -> str:
-        clinical = worker_outputs["clinical"].summary
-        patent = worker_outputs["patent"].summary
-        literature = worker_outputs["literature"].summary
-        market = worker_outputs["market"].summary
-        return (
-            f"{molecule} shows encouraging clinical signals ({clinical}). "
-            f"Patent view: {patent}. Literature review: {literature}. "
-            f"Market stance: {market}."
-        )
+        header = f"{molecule} — Lite innovation summary (LLM fallback)."
+        lines = self._build_lite_story_lines(worker_outputs)
+        return "\n".join([header, *lines])
+
+    def _build_lite_story_lines(self, worker_outputs: Dict[str, WorkerResult]) -> List[str]:
+        ordered = ("clinical", "literature", "patent", "market")
+        lines: List[str] = []
+        for name in ordered:
+            result = worker_outputs.get(name)
+            if not result:
+                continue
+            highlight = self._summarize_worker_highlight(name, result)
+            lines.append(
+                f"- {name.title()} ({result.confidence_band} confidence): {highlight}"
+            )
+        for name, result in worker_outputs.items():
+            if name in ordered:
+                continue
+            highlight = self._summarize_worker_highlight(name, result)
+            lines.append(f"- {name.title()}: {highlight}")
+        if not lines:
+            lines.append("- No worker insights available; re-run once retrieval succeeds.")
+        return lines
+
+    def _summarize_worker_highlight(
+        self,
+        worker_name: str,
+        result: WorkerResult,
+    ) -> str:
+        summary = (result.summary or "").strip()
+        metadata_hint = self._metadata_hint(worker_name, result.metadata)
+        parts = [part for part in (summary, metadata_hint) if part]
+        if not parts:
+            parts = [self._evidence_hint(result)]
+        text = " | ".join(parts)
+        return self._ensure_sentence(self._truncate(text, 260))
+
+    def _metadata_hint(self, worker_name: str, metadata: Dict[str, str]) -> str:
+        if not metadata:
+            return ""
+        hints: List[str] = []
+        if worker_name == "clinical":
+            trials_hint = self._describe_trial_count(metadata.get("trials"))
+            if trials_hint:
+                hints.append(trials_hint)
+            populations = metadata.get("populations")
+            if populations:
+                hints.append(f"populations: {self._truncate(populations, 60)}")
+        elif worker_name == "patent":
+            assignees = metadata.get("assignees")
+            if assignees:
+                hints.append(f"assignees: {self._truncate(assignees, 60)}")
+            priority = metadata.get("priority_dates")
+            if priority:
+                hints.append(f"priority: {self._truncate(priority, 40)}")
+            contra = self._first_json_entry(metadata.get("contraindications"))
+            if contra:
+                hints.append(f"contra: {self._truncate(contra, 60)}")
+        elif worker_name == "literature":
+            count = metadata.get("evidence_count")
+            if count:
+                hints.append(f"{count} studies reviewed")
+            journals = metadata.get("journals")
+            if journals:
+                hints.append(f"journals: {self._truncate(journals, 60)}")
+        elif worker_name == "market":
+            score = metadata.get("market_score")
+            if score:
+                hints.append(f"score {score}")
+            tam = metadata.get("tam")
+            if tam:
+                hints.append(f"TAM {self._truncate(tam, 30)}")
+            comp = metadata.get("competition")
+            if comp:
+                hints.append(f"competition: {self._truncate(comp, 40)}")
+
+        if not hints:
+            for key, value in metadata.items():
+                if value:
+                    hints.append(f"{key}: {self._truncate(str(value), 60)}")
+                    break
+        return "; ".join(hints)
+
+    def _describe_trial_count(self, raw: str | None) -> str:
+        if not raw:
+            return ""
+        try:
+            data = json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            return ""
+        if isinstance(data, list):
+            count = len(data)
+            if count:
+                return f"{count} trial{'s' if count != 1 else ''} parsed"
+        return ""
+
+    def _first_json_entry(self, raw: str | None) -> str:
+        if not raw:
+            return ""
+        try:
+            data = json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            return ""
+        if isinstance(data, list) and data:
+            return str(data[0])
+        if isinstance(data, dict):
+            for key, value in data.items():
+                if value:
+                    return f"{key}: {value}"
+        return str(data)
+
+    def _evidence_hint(self, result: WorkerResult) -> str:
+        if result.evidence:
+            snippet = (result.evidence[0].text or "").strip()
+            if snippet:
+                return self._truncate(snippet, 200)
+        return "No structured insight captured yet"
+
+    def _truncate(self, value: str, limit: int = 160) -> str:
+        if len(value) <= limit:
+            return value
+        return value[: limit - 3].rstrip() + "..."
+
+    def _ensure_sentence(self, text: str) -> str:
+        cleaned = text.strip()
+        if not cleaned:
+            return "No structured insight captured yet."
+        if cleaned[-1] in ".!?":
+            return cleaned
+        return f"{cleaned}."
 
     def _synthesize_story_and_recommendation(
         self,
