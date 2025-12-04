@@ -45,6 +45,7 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 
 ### Data & infra follow-ups
 - Postgres schema now covers `molecules`, `jobs`, `documents`, `passages`, and `reports`, and the FastAPI backend persists jobs plus evidence into the database via SQLAlchemy models.
+- MinIO/S3 wiring now stores raw job payloads and generated PDF artifacts via the new object storage client, with configurable buckets and docker-compose defaults.
 
 ## 🔜 Pending
 ### Phase UI — Experience & admin

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from .models import Document, Job as JobModel, Molecule, Passage, Report
 from .schemas import JobCreateRequest, JobResponse, JobStatus
+from .storage import store_raw_document
 
 
 class InMemoryJobStore:
@@ -63,7 +64,28 @@ class InMemoryJobStore:
             self._jobs.pop(job_id, None)
 
     def persist_artifacts(self, job_id: str, payload: dict, report_version: int | None) -> None:
-        return None
+        raw_uri = store_raw_document(job_id, payload)
+        job = self._jobs.get(job_id)
+        if not job:
+            return
+        storage_meta = payload.setdefault("storage", {})
+        if raw_uri:
+            storage_meta["raw_document_uri"] = raw_uri
+        job.payload = payload
+        job.report_version = report_version or job.report_version
+        job.updated_at = datetime.utcnow()
+        self._jobs[job_id] = job
+
+    def record_report_artifact(self, job_id: str, report_version: int, artifact_path: str) -> None:
+        job = self._jobs.get(job_id)
+        if not job:
+            return
+        payload = job.payload or {}
+        storage_meta = payload.setdefault("storage", {})
+        storage_meta["report_pdf_uri"] = artifact_path
+        job.payload = payload
+        job.updated_at = datetime.utcnow()
+        self._jobs[job_id] = job
 
 
 class PostgresJobStore:
@@ -175,6 +197,35 @@ class PostgresJobStore:
                 payload=payload,
             )
             session.add(report)
+
+            raw_uri = store_raw_document(job_id, payload)
+            storage_meta = payload.setdefault("storage", {})
+            if raw_uri:
+                storage_meta["raw_document_uri"] = raw_uri
+            report.payload = payload
+            job.payload = payload
+            session.add(job)
+            session.commit()
+
+    def record_report_artifact(self, job_id: str, report_version: int, artifact_path: str) -> None:
+        with self._session() as session:
+            job = self._get_job_or_error(session, job_id)
+            statement = (
+                select(Report)
+                .where(Report.job_id == job_id, Report.version == report_version)
+                .order_by(Report.created_at.desc())
+                .limit(1)
+            )
+            report = session.scalar(statement)
+            if report:
+                report.artifact_path = artifact_path
+                session.add(report)
+
+            payload = job.payload or {}
+            storage_meta = payload.setdefault("storage", {})
+            storage_meta["report_pdf_uri"] = artifact_path
+            job.payload = payload
+            session.add(job)
             session.commit()
 
     def _get_or_create_molecule(self, session: Session, payload: JobCreateRequest) -> Molecule:

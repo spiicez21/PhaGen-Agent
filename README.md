@@ -55,6 +55,21 @@ The repo-level `requirements.txt` simply pulls in `backend/requirements.txt` and
    DATABASE_ECHO=false  # flip to true for SQL logging
    ```
    The default URL matches the `postgres` service in `infra/docker-compose.yml`. Update the value if you run Postgres elsewhere (e.g., managed cloud instance) or temporarily point it at `sqlite:///./phagen.db` when developing without a database container.
+
+   Object storage (MinIO/S3-compatible) powers raw document snapshots and archived PDF exports. Configure the backend with:
+
+   ```bash
+   STORAGE_PROVIDER=s3
+   S3_ENDPOINT_URL=http://localhost:9000
+   S3_REGION=us-east-1
+   S3_ACCESS_KEY=admin
+   S3_SECRET_KEY=phagen123
+   S3_USE_SSL=false
+   S3_RAW_DOCUMENTS_BUCKET=phagen-raw-documents
+   S3_REPORTS_BUCKET=phagen-report-artifacts
+   ```
+
+   These defaults align with the `minio` service in `infra/docker-compose.yml`; swap them for your own S3 bucket credentials in staging/production. Set `STORAGE_PROVIDER=none` if you want to skip uploads during local development.
 2. **Frontend**
    ```bash
    cd frontend
@@ -138,6 +153,13 @@ The backend now persists job lifecycles to Postgres via SQLAlchemy models create
 - `reports` — structured innovation story payloads alongside their report version, ready for future PDF/JSON export diffs.
 
 Tables are created automatically by `app.database.init_db()` when Uvicorn boots. Point `DATABASE_URL` at your desired Postgres instance and the ORM will create or upgrade the schema as needed (use Alembic for future migrations once the schema stabilizes).
+
+## Object storage & artifacts
+
+- Raw structured job payloads are snapshotted to the `S3_RAW_DOCUMENTS_BUCKET` (default `phagen-raw-documents`) every time a job finishes. Files land under `jobs/{job_id}/raw/<timestamp>.json` so you can diff payloads over time or replay them through downstream pipelines.
+- Generated PDF exports are uploaded to the `S3_REPORTS_BUCKET` (default `phagen-report-artifacts`) when the `/api/jobs/{id}/report.pdf` endpoint is called; keys follow `jobs/{job_id}/reports/v{version}-<timestamp>.pdf`.
+- Uploads target whatever endpoint/credentials you configure (MinIO via Docker Compose or a real S3 bucket). If MinIO/S3 is unreachable, uploads are skipped but the API still returns the PDF/JSON; check the backend logs for warnings.
+- Bucket names, credentials, and endpoints are controlled via environment variables documented in the quick start section, allowing you to point dev, staging, and prod environments at different storage accounts.
 
 ### Windows PDF prerequisites
 

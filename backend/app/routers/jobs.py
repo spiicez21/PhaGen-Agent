@@ -7,6 +7,7 @@ from ..config import get_settings
 from ..database import SessionLocal
 from ..jobs import InMemoryJobStore, PostgresJobStore
 from ..reporting import generate_report_pdf
+from ..storage import store_report_pdf
 from ..schemas import JobCreateRequest, JobResponse, JobStatus
 
 try:
@@ -127,6 +128,10 @@ def download_report(job_id: str) -> Response:
         pdf_bytes = generate_report_pdf(job)
     except Exception as exc:  # pragma: no cover - rendering depends on runtime libs
         raise HTTPException(status_code=500, detail=f"Failed to render PDF: {exc}") from exc
+
+    artifact_uri = store_report_pdf(job.job_id, job.report_version or 1, pdf_bytes)
+    if artifact_uri:
+        job_store.record_report_artifact(job.job_id, job.report_version or 1, artifact_uri)
 
     return Response(
         content=pdf_bytes,
