@@ -16,12 +16,24 @@ import type {
   TimelineStep
 } from "./types";
 
+const PLACEHOLDER_STRUCTURE_SVG = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120">
+  <rect width="200" height="120" fill="#f5f5f5" stroke="#d0d0d0" />
+  <text x="100" y="64" text-anchor="middle" font-size="14" fill="#333">Structure preview</text>
+</svg>`;
+
 export const SAMPLE_PAYLOAD: MasterPayload = {
+  smiles: "O=C1NC(=O)N(C)C(=O)N1C",
   innovation_story:
     "Pirfenidone maintains a consistent anti-fibrotic signal across PF-ILD cohorts with manageable liver monitoring, opening a viable path for label expansion once follow-up registrational data matures.",
   recommendation: "Investigate",
   market_score: 72,
   report_version: 1,
+  structure: {
+    svg: PLACEHOLDER_STRUCTURE_SVG,
+    path: "backend/app/report_assets/structures/pirfenidone-demo.svg",
+    smiles: "O=C1NC(=O)N(C)C(=O)N1C"
+  },
   workers: {
     clinical: {
       summary:
@@ -133,11 +145,17 @@ export const SAMPLE_PAYLOAD: MasterPayload = {
 };
 
 export const METFORMIN_PAYLOAD: MasterPayload = {
+  smiles: "CN(C)C(=N)N=C(N)N",
   innovation_story:
     "Metformin shows emerging anti-fibrotic and anti-inflammatory activity in NASH and SSc cohorts, but controlled data remains limited outside metabolic endpoints.",
   recommendation: "Monitor",
   market_score: 61,
   report_version: 2,
+  structure: {
+    svg: PLACEHOLDER_STRUCTURE_SVG,
+    path: "backend/app/report_assets/structures/metformin-demo.svg",
+    smiles: "CN(C)C(=N)N=C(N)N"
+  },
   workers: {
     clinical: {
       summary:

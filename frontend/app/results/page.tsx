@@ -6,6 +6,7 @@ export default function ResultsPage() {
   const workers = SAMPLE_PAYLOAD.workers;
   const validation = SAMPLE_PAYLOAD.validation;
   const reportVersion = SAMPLE_PAYLOAD.report_version ?? 1;
+  const structure = SAMPLE_PAYLOAD.structure;
 
   return (
     <div className="section-stack">
@@ -39,6 +40,27 @@ export default function ResultsPage() {
           </div>
         </div>
       </section>
+
+      {structure && (
+        <section className="section-card space-y-4">
+          <div>
+            <p className="eyebrow">Molecular structure</p>
+            <h2 className="text-xl font-semibold">SMILES preview</h2>
+            <p className="subtle-text">{structure.smiles}</p>
+          </div>
+          {structure.svg ? (
+            <div
+              className="rounded-2xl border border-neutral-200 bg-white p-4"
+              dangerouslySetInnerHTML={{ __html: structure.svg }}
+            />
+          ) : (
+            <p className="text-sm text-red-700">{structure.error ?? "Structure unavailable."}</p>
+          )}
+          {structure.path ? (
+            <p className="subtle-text">Saved asset: {structure.path}</p>
+          ) : null}
+        </section>
+      )}
 
       <EvidenceTabs workers={workers} reportJobId={DEMO_JOB.id} reportVersion={reportVersion} />
 

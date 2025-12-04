@@ -31,6 +31,13 @@ export interface ValidationSummary {
   claim_links: StoryClaimLink[];
 }
 
+export interface StructureAsset {
+  svg: string;
+  path: string;
+  smiles: string;
+  error?: string;
+}
+
 export interface MasterPayload {
   innovation_story: string;
   recommendation: string;
@@ -38,6 +45,8 @@ export interface MasterPayload {
   workers: Record<string, WorkerResultPayload>;
   validation?: ValidationSummary;
   report_version?: number;
+  structure?: StructureAsset;
+  smiles?: string;
 }
 
 export type TimelineStatus = "pending" | "running" | "completed" | "failed";

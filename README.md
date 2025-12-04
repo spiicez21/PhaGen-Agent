@@ -131,6 +131,13 @@ The backend now renders reports exclusively via `pdfkit` + `wkhtmltopdf`. Instal
 
 If PDF export fails, the backend raises a runtime error that tells you whether `pdfkit` failed to import or the wkhtmltopdf binary couldn’t be found. See the [pdfkit troubleshooting wiki](https://github.com/JazzCore/python-pdfkit/wiki/Installing-wkhtmltopdf) for additional tips.
 
+### RDKit molecular rendering
+
+- `backend/requirements.txt` now includes `rdkit-pypi==2022.9.5` plus `onnxruntime` (Chroma’s ONNX embeddings). Re-run `pip install -r backend/requirements.txt` inside the repo `.venv` after pulling these changes.
+- RDKit renders SMILES strings to SVG during job completion and stores the assets under `backend/app/report_assets/structures/` by default. Override the storage root by setting the `REPORT_ASSETS_DIR` environment variable before starting Uvicorn if you want the SVGs/PDF snippets to land elsewhere (e.g., shared storage).
+- Each completed job now carries a `payload.structure` block containing `{ svg, path, smiles, error }`. The frontend consumes this metadata to display the molecule preview, and the PDF exporter embeds the same SVG inline.
+- After installing/upgrading RDKit, restart the backend (`uvicorn app.main:app --reload`) to ensure the new dependency and environment variables are picked up and new jobs generate structure previews automatically.
+
 ## Comparison workspace
 
 - `/comparison` lets reviewers line up two or three molecules side-by-side with shared metrics, worker summaries, and top citations. It defaults to demo payloads but accepts real job IDs once they exist.

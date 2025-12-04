@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Response
 
+from ..chemistry import build_structure_payload
 from ..config import get_settings
 from ..jobs import InMemoryJobStore
 from ..reporting import generate_report_pdf
@@ -18,6 +19,23 @@ settings = get_settings()
 router = APIRouter(prefix=f"{settings.api_prefix}/jobs", tags=["jobs"])
 job_store = InMemoryJobStore(ttl_minutes=settings.job_ttl_minutes)
 master_agent = MasterAgent(top_k=settings.rag_top_k)
+
+
+def _ensure_structure_metadata(job_id: str, payload: dict) -> None:
+    smiles = payload.get("smiles") or payload.get("molecule_smiles")
+    if not smiles:
+        return
+
+    existing = payload.get("structure") or {}
+    if existing.get("svg") and not existing.get("error"):
+        return
+
+    molecule_label = (payload.get("molecule") or "molecule").strip() or "molecule"
+    payload["structure"] = build_structure_payload(
+        smiles=smiles,
+        job_id=job_id,
+        molecule_label=molecule_label,
+    )
 
 
 def _run_job(job_id: str, payload: JobCreateRequest) -> None:
@@ -37,8 +55,11 @@ def _run_job(job_id: str, payload: JobCreateRequest) -> None:
             return
         serialized = master_agent.serialize(result.output)
         serialized.setdefault("molecule", payload.molecule)
+        if payload.smiles:
+            serialized.setdefault("smiles", payload.smiles)
         version = job_store.assign_report_version(job_id, serialized.get("molecule"))
         serialized["report_version"] = version
+        _ensure_structure_metadata(job_id, serialized)
         job_store.update_job(
             job_id,
             status=JobStatus.completed,
