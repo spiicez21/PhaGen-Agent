@@ -157,6 +157,7 @@ This API-first crawl honors robots.txt (see `crawler/src/robots.ts`) and caps pa
 - Every evidence snippet now receives a deterministic ID (e.g., `clinical-1`) when the master agent serializes results.
 - The innovation story is split into sentence-level claims, each linked to one or more evidence IDs; the payload exposes this under `validation` with pass/fail status plus linked counts.
 - `/comparison`, `/results`, and the PDF report highlight the validation summary so reviewers can confirm every claim is grounded before sharing deliverables.
+- Retrieval guardrails now emit per-worker metrics (queries attempted, passages gathered, coverage ratios, precision proxy) and alert lists under the payload `quality` block so the UI/API can highlight low-evidence or anomalous runs before results are shared.
 
 ## Operational data model
 

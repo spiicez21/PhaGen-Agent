@@ -65,6 +65,17 @@ export const SAMPLE_PAYLOAD: MasterPayload = {
       metadata: {
         trials: '[{"nct_id":"NCT01907900","phase":"Phase 2","status":"Completed"}]',
         population: "PF-ILD"
+      },
+      metrics: {
+        query_terms: 2,
+        retrieved_passages: 12,
+        final_passages: 5,
+        evidence_count: 2,
+        unique_sources: 2,
+        coverage_ratio: 1,
+        precision_proxy: 0.5,
+        high_conf_evidence: 1,
+        retriever_top_k: 5
       }
     },
     literature: {
@@ -82,7 +93,22 @@ export const SAMPLE_PAYLOAD: MasterPayload = {
       ],
       metadata: {
         sources: "3 peer-reviewed articles"
-      }
+      },
+      metrics: {
+        query_terms: 3,
+        retrieved_passages: 9,
+        final_passages: 3,
+        evidence_count: 1,
+        unique_sources: 1,
+        coverage_ratio: 0.6,
+        precision_proxy: 0.6,
+        high_conf_evidence: 1,
+        retriever_top_k: 5
+      },
+      alerts: [
+        "Low evidence coverage (1/2)",
+        "Evidence monoculture (single unique source)"
+      ]
     },
     patent: {
       summary: "Key Genentech filings on pirfenidone combinations expire 2028-2030; no blocking claims on PF-ILD indication found.",
@@ -100,6 +126,17 @@ export const SAMPLE_PAYLOAD: MasterPayload = {
       metadata: {
         risk: "Low",
         regulatory_notes: "Label monitoring: hepatotoxicity"
+      },
+      metrics: {
+        query_terms: 2,
+        retrieved_passages: 6,
+        final_passages: 2,
+        evidence_count: 1,
+        unique_sources: 1,
+        coverage_ratio: 0.4,
+        precision_proxy: 0.58,
+        high_conf_evidence: 0,
+        retriever_top_k: 5
       }
     },
     market: {
@@ -117,7 +154,73 @@ export const SAMPLE_PAYLOAD: MasterPayload = {
       ],
       metadata: {
         score_breakdown: "Demand 0.8 | Competition 0.5 | Access 0.7"
+      },
+      metrics: {
+        query_terms: 2,
+        retrieved_passages: 7,
+        final_passages: 3,
+        evidence_count: 1,
+        unique_sources: 1,
+        coverage_ratio: 0.6,
+        precision_proxy: 0.65,
+        high_conf_evidence: 1,
+        retriever_top_k: 5
       }
+    }
+  },
+  quality: {
+    status: "needs_attention",
+    metrics: {
+      clinical: {
+        query_terms: 2,
+        retrieved_passages: 12,
+        final_passages: 5,
+        evidence_count: 2,
+        unique_sources: 2,
+        coverage_ratio: 1,
+        precision_proxy: 0.5,
+        high_conf_evidence: 1,
+        retriever_top_k: 5
+      },
+      literature: {
+        query_terms: 3,
+        retrieved_passages: 9,
+        final_passages: 3,
+        evidence_count: 1,
+        unique_sources: 1,
+        coverage_ratio: 0.6,
+        precision_proxy: 0.6,
+        high_conf_evidence: 1,
+        retriever_top_k: 5
+      },
+      patent: {
+        query_terms: 2,
+        retrieved_passages: 6,
+        final_passages: 2,
+        evidence_count: 1,
+        unique_sources: 1,
+        coverage_ratio: 0.4,
+        precision_proxy: 0.58,
+        high_conf_evidence: 0,
+        retriever_top_k: 5
+      },
+      market: {
+        query_terms: 2,
+        retrieved_passages: 7,
+        final_passages: 3,
+        evidence_count: 1,
+        unique_sources: 1,
+        coverage_ratio: 0.6,
+        precision_proxy: 0.65,
+        high_conf_evidence: 1,
+        retriever_top_k: 5
+      }
+    },
+    alerts: {
+      literature: [
+        "Low evidence coverage (1/2)",
+        "Evidence monoculture (single unique source)"
+      ]
     }
   },
   validation: {
@@ -186,7 +289,22 @@ export const METFORMIN_PAYLOAD: MasterPayload = {
       metadata: {
         trials: '[{"nct_id":"NCT04511234","phase":"Phase 2","status":"Active"}]',
         population: "NASH"
-      }
+      },
+      metrics: {
+        query_terms: 2,
+        retrieved_passages: 8,
+        final_passages: 3,
+        evidence_count: 1,
+        unique_sources: 1,
+        coverage_ratio: 0.6,
+        precision_proxy: 0.52,
+        high_conf_evidence: 0,
+        retriever_top_k: 5
+      },
+      alerts: [
+        "Low evidence coverage (1/2)",
+        "Evidence monoculture (single unique source)"
+      ]
     },
     literature: {
       summary:
@@ -204,6 +322,17 @@ export const METFORMIN_PAYLOAD: MasterPayload = {
       ],
       metadata: {
         sources: "2 peer-reviewed articles"
+      },
+      metrics: {
+        query_terms: 3,
+        retrieved_passages: 7,
+        final_passages: 2,
+        evidence_count: 1,
+        unique_sources: 1,
+        coverage_ratio: 0.4,
+        precision_proxy: 0.57,
+        high_conf_evidence: 1,
+        retriever_top_k: 5
       }
     },
     patent: {
@@ -222,7 +351,19 @@ export const METFORMIN_PAYLOAD: MasterPayload = {
       metadata: {
         risk: "Medium",
         regulatory_notes: "Monitor lactic acidosis risk"
-      }
+      },
+      metrics: {
+        query_terms: 2,
+        retrieved_passages: 5,
+        final_passages: 2,
+        evidence_count: 1,
+        unique_sources: 1,
+        coverage_ratio: 0.4,
+        precision_proxy: 0.44,
+        high_conf_evidence: 0,
+        retriever_top_k: 5
+      },
+      alerts: ["Low precision proxy (0.44 < 0.50)"]
     },
     market: {
       summary:
@@ -240,7 +381,73 @@ export const METFORMIN_PAYLOAD: MasterPayload = {
       ],
       metadata: {
         score_breakdown: "Demand 0.6 | Competition 0.5 | Access 0.4"
+      },
+      metrics: {
+        query_terms: 2,
+        retrieved_passages: 6,
+        final_passages: 2,
+        evidence_count: 1,
+        unique_sources: 1,
+        coverage_ratio: 0.4,
+        precision_proxy: 0.48,
+        high_conf_evidence: 0,
+        retriever_top_k: 5
+      },
+      alerts: ["Low precision proxy (0.48 < 0.50)"]
+    }
+  },
+  quality: {
+    status: "investigate",
+    metrics: {
+      clinical: {
+        query_terms: 2,
+        retrieved_passages: 8,
+        final_passages: 3,
+        evidence_count: 1,
+        unique_sources: 1,
+        coverage_ratio: 0.6,
+        precision_proxy: 0.52,
+        high_conf_evidence: 0,
+        retriever_top_k: 5
+      },
+      literature: {
+        query_terms: 3,
+        retrieved_passages: 7,
+        final_passages: 2,
+        evidence_count: 1,
+        unique_sources: 1,
+        coverage_ratio: 0.4,
+        precision_proxy: 0.57,
+        high_conf_evidence: 1,
+        retriever_top_k: 5
+      },
+      patent: {
+        query_terms: 2,
+        retrieved_passages: 5,
+        final_passages: 2,
+        evidence_count: 1,
+        unique_sources: 1,
+        coverage_ratio: 0.4,
+        precision_proxy: 0.44,
+        high_conf_evidence: 0,
+        retriever_top_k: 5
+      },
+      market: {
+        query_terms: 2,
+        retrieved_passages: 6,
+        final_passages: 2,
+        evidence_count: 1,
+        unique_sources: 1,
+        coverage_ratio: 0.4,
+        precision_proxy: 0.48,
+        high_conf_evidence: 0,
+        retriever_top_k: 5
       }
+    },
+    alerts: {
+      clinical: ["Low evidence coverage (1/2)", "Evidence monoculture (single unique source)"],
+      patent: ["Low precision proxy (0.44 < 0.50)"],
+      market: ["Low precision proxy (0.48 < 0.50)"]
     }
   },
   validation: {

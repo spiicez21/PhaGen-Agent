@@ -25,6 +25,9 @@ class Worker(ABC):
         (0.6, "medium"),
         (0.0, "low"),
     )
+    MIN_EVIDENCE_THRESHOLD = 2
+    MIN_COVERAGE_RATIO = 0.5
+    MIN_PRECISION_RATIO = 0.5
 
     def __init__(
         self,
@@ -41,10 +44,7 @@ class Worker(ABC):
         raise NotImplementedError
 
     def run(self, request: WorkerRequest) -> WorkerResult:
-        queries = [request.molecule]
-        for synonym in request.synonyms:
-            if synonym and synonym.lower() != request.molecule.lower():
-                queries.append(synonym)
+        queries = self._build_query_terms(request)
 
         gathered: List[dict] = []
         seen_ids: set[str] = set()
@@ -76,8 +76,30 @@ class Worker(ABC):
 
         ordered = sorted(gathered, key=self._source_rank)
         limited = ordered[: request.top_k]
+        result = self.build_summary(request, limited)
+        result.metrics = self._compute_metrics(
+            gathered=gathered,
+            limited=limited,
+            queries=queries,
+            request=request,
+            result=result,
+        )
+        result.alerts = self._evaluate_guardrails(result.metrics)
+        return result
 
-        return self.build_summary(request, limited)
+    def _build_query_terms(self, request: WorkerRequest) -> List[str]:
+        terms: List[str] = []
+        seen: set[str] = set()
+        for candidate in [request.molecule, *(request.synonyms or [])]:
+            normalized = (candidate or "").strip()
+            if not normalized:
+                continue
+            lowered = normalized.lower()
+            if lowered in seen:
+                continue
+            seen.add(lowered)
+            terms.append(normalized)
+        return terms or [request.molecule]
 
     def _to_evidence(self, passages: List[dict], default_type: str) -> List[EvidenceItem]:
         return [
@@ -89,6 +111,75 @@ class Worker(ABC):
             )
             for idx, passage in enumerate(passages)
         ]
+
+    # Quality metrics & guardrails ---------------------------------
+    def _compute_metrics(
+        self,
+        gathered: List[dict],
+        limited: List[dict],
+        queries: List[str],
+        request: WorkerRequest,
+        result: WorkerResult,
+    ) -> dict:
+        total_retrieved = len(gathered)
+        final_passages = len(limited)
+        evidence_count = len(result.evidence)
+        unique_sources = len(
+            {
+                passage.get("url")
+                or passage.get("id")
+                or f"{idx}:{passage.get('rank', 0)}"
+                for idx, passage in enumerate(limited)
+            }
+        )
+        high_conf_count = sum(1 for item in result.evidence if item.confidence >= 0.8)
+        coverage_ratio = final_passages / max(1, request.top_k)
+        precision_proxy = (
+            high_conf_count / max(1, evidence_count)
+            if evidence_count
+            else 0.0
+        )
+        return {
+            "query_terms": len(queries),
+            "retrieved_passages": total_retrieved,
+            "final_passages": final_passages,
+            "evidence_count": evidence_count,
+            "unique_sources": unique_sources,
+            "coverage_ratio": round(coverage_ratio, 3),
+            "precision_proxy": round(precision_proxy, 3),
+            "high_conf_evidence": high_conf_count,
+            "retriever_top_k": request.top_k,
+        }
+
+    def _evaluate_guardrails(self, metrics: dict) -> List[str]:
+        alerts: List[str] = []
+        evidence_count = metrics.get("evidence_count", 0)
+        coverage_ratio = metrics.get("coverage_ratio", 0.0)
+        precision_proxy = metrics.get("precision_proxy", 0.0)
+        unique_sources = metrics.get("unique_sources", 0)
+        final_passages = metrics.get("final_passages", 0)
+        retrieved = metrics.get("retrieved_passages", 0)
+
+        if retrieved == 0:
+            alerts.append("[ANOMALY] No passages retrieved from index")
+        elif final_passages == 0:
+            alerts.append("[ANOMALY] All passages filtered out by budget")
+
+        if evidence_count < self.MIN_EVIDENCE_THRESHOLD:
+            alerts.append(
+                f"Low evidence coverage ({evidence_count}/{self.MIN_EVIDENCE_THRESHOLD})"
+            )
+        if coverage_ratio < self.MIN_COVERAGE_RATIO:
+            alerts.append(
+                f"Low retrieval coverage ({coverage_ratio:.2f} < {self.MIN_COVERAGE_RATIO:.2f})"
+            )
+        if evidence_count and precision_proxy < self.MIN_PRECISION_RATIO:
+            alerts.append(
+                f"Low precision proxy ({precision_proxy:.2f} < {self.MIN_PRECISION_RATIO:.2f})"
+            )
+        if unique_sources <= 1 and final_passages >= 2:
+            alerts.append("Evidence monoculture (single unique source)")
+        return alerts
 
     # LLM helpers ----------------------------------------------------
     def _format_passages(self, passages: List[dict], limit: int = 5) -> str:

@@ -14,6 +14,8 @@ export interface WorkerResultPayload {
   confidence: number;
   confidence_band: "low" | "medium" | "high";
   metadata: Record<string, string>;
+  metrics?: WorkerQualityMetrics;
+  alerts?: string[];
 }
 
 export interface StoryClaimLink {
@@ -53,6 +55,7 @@ export interface MasterPayload {
   market_score: number;
   workers: Record<string, WorkerResultPayload>;
   validation?: ValidationSummary;
+  quality?: QualitySummary;
   report_version?: number;
   structure?: StructureAsset;
   smiles?: string;
@@ -169,4 +172,24 @@ export interface JobApiResponse {
   payload?: MasterPayloadWithMeta;
   recommendation?: string;
   report_version?: number;
+}
+
+export interface WorkerQualityMetrics {
+  query_terms: number;
+  retrieved_passages: number;
+  final_passages: number;
+  evidence_count: number;
+  unique_sources: number;
+  coverage_ratio: number;
+  precision_proxy: number;
+  high_conf_evidence: number;
+  retriever_top_k: number;
+}
+
+export type QualityStatus = "pass" | "needs_attention" | "investigate";
+
+export interface QualitySummary {
+  status: QualityStatus;
+  metrics: Record<string, WorkerQualityMetrics>;
+  alerts: Record<string, string[]>;
 }

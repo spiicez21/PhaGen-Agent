@@ -57,6 +57,9 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - RDKit structure rendering now runs automatically inside `indexes/build_index.py`, consuming `indexes/data/normalized_smiles.jsonl`, emitting SVG/metadata assets + manifests under `indexes/data/structures/`, and wiring summary stats into snapshot manifests so workers/reports can reuse the catalog without re-rendering.
 - Structure manifest entries now carry full provenance metadata (`image_id`, `source_type`, `source_ref`, `license`, `generated_at`) so downstream workers/reports can trace each asset.
 
+### Quality, guardrails, and ops
+- Retrieval precision coverage is now measured per worker (queries attempted, passages gathered, evidence counts, precision proxy), and guardrails raise alerts for low evidence, weak coverage, or anomalous retrieval gaps. Alerts and metrics ship in each job payload under the `quality` block so the UI/API can flag risky runs.
+
 ## 🔜 Pending
 ### Phase UI — Experience & admin
 - [ ] Implement stretch visualizations (knowledge graph, citation trace, molecule comparison) after MVP.
@@ -68,7 +71,6 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - [ ] Add "Request structure" action in molecule intake to create SMILES → RDKit render.
 
 ### Quality, guardrails, and ops
-- [ ] Implement retrieval precision checks / coverage metrics plus guardrails (evidence thresholds, anomaly detection).
 - [ ] Set up Docker Compose & GitHub Actions workflow described in Section 10 (tests + image builds).
 - [ ] Prepare the hackathon demo script, slides, and fallback assets outlined in Section 11.
 - [ ] Model hallucination detector or citation-gap checker for final stories.

@@ -338,7 +338,10 @@ class MasterAgent:
                     }
                     for item in result.evidence[:3]
                 ],
+                "metrics": result.metrics,
             }
+            if result.alerts:
+                payload[name]["alerts"] = result.alerts
         return payload
 
     def _parse_master_response(self, raw: str) -> dict:
@@ -376,6 +379,7 @@ class MasterAgent:
             worker_evidence_map,
         )
         payload["validation"] = self._build_validation_summary(claim_links)
+        payload["quality"] = self._build_quality_summary(worker_outputs=result.workers)
         payload["workers"] = workers
         return payload
 
@@ -502,4 +506,23 @@ class MasterAgent:
             "claims_total": total,
             "claims_linked": linked,
             "claim_links": claim_links,
+        }
+
+    def _build_quality_summary(self, worker_outputs: Dict[str, WorkerResult]) -> dict:
+        metrics: Dict[str, dict] = {}
+        alerts: Dict[str, List[str]] = {}
+        has_anomaly = False
+        for name, result in (worker_outputs or {}).items():
+            metrics[name] = result.metrics or {}
+            if result.alerts:
+                alerts[name] = result.alerts
+                if any(alert.lower().startswith("[anomaly]") for alert in result.alerts):
+                    has_anomaly = True
+        status = "pass"
+        if alerts:
+            status = "investigate" if has_anomaly else "needs_attention"
+        return {
+            "status": status,
+            "metrics": metrics,
+            "alerts": alerts,
         }
