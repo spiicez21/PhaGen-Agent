@@ -31,6 +31,7 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - HTML-to-PDF export path now streams backend-generated reports with frontend download hooks.
 - Multi-molecule comparison workspace now renders side-by-side evidence plus a `/api/jobs/compare` endpoint for shared payloads.
 - Validation pass now assigns deterministic evidence IDs and links every innovation story claim to its supporting citations, surfacing the status in UI + PDF exports.
+- Report versioning now tracks V1/V2 snapshots per molecule for downstream audits.
 - Lite fallback summarizer now emits a multi-line innovation story when the LLM synthesis path is unavailable.
 
 ### Phase UI — Experience & admin
@@ -41,7 +42,6 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 
 ## 🔜 Pending
 ### Phase 4 — Aggregation & reporting
-- [ ] Report versioning so each molecule keeps V1/V2 snapshots for auditability.
 - [ ] Integrate RDKit rendering into the report generator (SVG/PNG outputs embedded into PDF & HTML).
 - [ ] Implement `reports/images/` storage schema for RDKit-generated assets and provenance metadata (source: SMILES/INCHI/PubChem).
 - [ ] Add RDKit unit tests for canonical rendering (visual diff baseline images).

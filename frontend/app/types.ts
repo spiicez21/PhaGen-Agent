@@ -37,6 +37,7 @@ export interface MasterPayload {
   market_score: number;
   workers: Record<string, WorkerResultPayload>;
   validation?: ValidationSummary;
+  report_version?: number;
 }
 
 export type TimelineStatus = "pending" | "running" | "completed" | "failed";
@@ -148,4 +149,5 @@ export interface JobApiResponse {
   updated_at: string;
   payload?: MasterPayloadWithMeta;
   recommendation?: string;
+  report_version?: number;
 }

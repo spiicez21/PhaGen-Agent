@@ -97,7 +97,7 @@ See `docs/architecture.md` for the full sequence diagram and responsibilities pe
 3. **Retrieval/RAG** – workers query Chroma via the shared retriever, apply source-ranking, and summarize passages via the shared LLM runtime (Ollama by default, OpenAI optional).
 4. **Aggregation** – `MasterAgent` merges worker JSON, runs the Phase 4 synthesis prompt, and persists the innovation story + rubric-based recommendation into the job store.
    - If the LLM synthesis path is unavailable, the master agent now emits a deterministic "lite" summary that strings together worker highlights so downstream UIs/PDFs still render.
-5. **Reporting** – the frontend polls `/api/jobs/{id}` until complete; the same payload fuels the Evidence tabs, PDF export (`/api/jobs/{id}/report.pdf`), and JSON download button in `/reports`.
+5. **Reporting** – the frontend polls `/api/jobs/{id}` until complete; the same payload fuels the Evidence tabs, PDF export (`/api/jobs/{id}/report.pdf`), and JSON download button in `/reports`. Each molecule now accrues monotonic report versions (V1, V2, …) so auditors can track which snapshot was shared.
 
 ## Data & indexing pipeline
 

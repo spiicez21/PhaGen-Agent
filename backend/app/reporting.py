@@ -124,7 +124,7 @@ _REPORT_TEMPLATE = _ENV.from_string(
     <header>
       <p class=\"eyebrow\">PhaGen Agentic · Innovation Story</p>
       <h1>{{ molecule }}</h1>
-      <p>Job ID {{ job_id }} · Generated {{ generated_at }}</p>
+      <p>Job ID {{ job_id }} · Report V{{ report_version }} · Generated {{ generated_at }}</p>
     </header>
 
     <section class=\"summary-box\">
@@ -281,11 +281,13 @@ def _build_context(job: JobResponse) -> Dict[str, object]:
         market_score = 0
 
     validation_block = _format_claim_links(payload.get("validation") or {})
+    report_version = payload.get("report_version") or job.report_version or 1
 
     return {
         "molecule": molecule,
         "job_id": job.job_id,
         "generated_at": job.updated_at.strftime("%b %d, %Y %H:%M UTC"),
+      "report_version": report_version,
         "innovation_story": payload.get("innovation_story", ""),
         "recommendation": recommendation,
         "market_score": market_score,

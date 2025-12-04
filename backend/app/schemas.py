@@ -46,3 +46,4 @@ class JobResponse(BaseModel):
     updated_at: datetime
     payload: Dict[str, dict] | None = None
     recommendation: Optional[Recommendation] = None
+    report_version: Optional[int] = None

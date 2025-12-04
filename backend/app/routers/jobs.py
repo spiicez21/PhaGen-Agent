@@ -37,11 +37,14 @@ def _run_job(job_id: str, payload: JobCreateRequest) -> None:
             return
         serialized = master_agent.serialize(result.output)
         serialized.setdefault("molecule", payload.molecule)
+        version = job_store.assign_report_version(job_id, serialized.get("molecule"))
+        serialized["report_version"] = version
         job_store.update_job(
             job_id,
             status=JobStatus.completed,
             payload=serialized,
             recommendation=result.output.recommendation,
+            report_version=version,
         )
     except Exception as exc:  # pragma: no cover - logging stub
         job_store.update_job(
