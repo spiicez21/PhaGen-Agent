@@ -47,6 +47,17 @@ export default function ResultsPage() {
             <p className="eyebrow">Molecular structure</p>
             <h2 className="text-xl font-semibold">SMILES preview</h2>
             <p className="subtle-text">{structure.smiles}</p>
+            {structure.source_type && structure.source_reference && (
+              <p className="text-sm text-neutral-600">
+                Source: {structure.source_type.toUpperCase()} · {structure.source_reference}
+              </p>
+            )}
+            {structure.generated_at && (
+              <p className="text-xs text-neutral-500">Generated {structure.generated_at}</p>
+            )}
+            {structure.image_id && (
+              <p className="text-xs text-neutral-500">Image ID: {structure.image_id}</p>
+            )}
           </div>
           {structure.svg ? (
             <div
@@ -56,9 +67,12 @@ export default function ResultsPage() {
           ) : (
             <p className="text-sm text-red-700">{structure.error ?? "Structure unavailable."}</p>
           )}
-          {structure.path ? (
-            <p className="subtle-text">Saved asset: {structure.path}</p>
-          ) : null}
+          {structure.path && (
+            <p className="subtle-text">SVG asset: {structure.path}</p>
+          )}
+          {structure.metadata_path && (
+            <p className="subtle-text">Provenance: {structure.metadata_path}</p>
+          )}
         </section>
       )}
 

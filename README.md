@@ -134,8 +134,8 @@ If PDF export fails, the backend raises a runtime error that tells you whether `
 ### RDKit molecular rendering
 
 - `backend/requirements.txt` now includes `rdkit-pypi==2022.9.5` plus `onnxruntime` (Chroma’s ONNX embeddings). Re-run `pip install -r backend/requirements.txt` inside the repo `.venv` after pulling these changes.
-- RDKit renders SMILES strings to SVG during job completion and stores the assets under `backend/app/report_assets/structures/` by default. Override the storage root by setting the `REPORT_ASSETS_DIR` environment variable before starting Uvicorn if you want the SVGs/PDF snippets to land elsewhere (e.g., shared storage).
-- Each completed job now carries a `payload.structure` block containing `{ svg, path, smiles, error }`. The frontend consumes this metadata to display the molecule preview, and the PDF exporter embeds the same SVG inline.
+- RDKit renders SMILES strings to SVG during job completion and stores the assets under `backend/app/report_assets/reports/images/structures/` by default, with a paired provenance JSON alongside in `.../metadata/`. Override the storage root by setting the `REPORT_ASSETS_DIR` environment variable before starting Uvicorn if you want the SVGs/PDF snippets to land elsewhere (e.g., shared storage or mounted volume).
+- Each completed job now carries a `payload.structure` block containing `{ svg, path, metadata_path, smiles, source_type, source_reference, image_id, generated_at, error }`. The frontend consumes this metadata to display the molecule preview, and the PDF exporter embeds the same SVG inline while surfacing the provenance trail.
 - After installing/upgrading RDKit, restart the backend (`uvicorn app.main:app --reload`) to ensure the new dependency and environment variables are picked up and new jobs generate structure previews automatically.
 
 ## Comparison workspace

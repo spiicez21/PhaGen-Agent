@@ -31,8 +31,13 @@ export const SAMPLE_PAYLOAD: MasterPayload = {
   report_version: 1,
   structure: {
     svg: PLACEHOLDER_STRUCTURE_SVG,
-    path: "backend/app/report_assets/structures/pirfenidone-demo.svg",
-    smiles: "O=C1NC(=O)N(C)C(=O)N1C"
+    path: "backend/app/report_assets/reports/images/structures/pirfenidone-demo.svg",
+    metadata_path: "backend/app/report_assets/reports/images/metadata/pirfenidone-demo.json",
+    smiles: "O=C1NC(=O)N(C)C(=O)N1C",
+    source_type: "smiles",
+    source_reference: "O=C1NC(=O)N(C)C(=O)N1C",
+    generated_at: "2025-12-04T10:00:00Z",
+    image_id: "pirfenidone-demo"
   },
   workers: {
     clinical: {
@@ -153,8 +158,13 @@ export const METFORMIN_PAYLOAD: MasterPayload = {
   report_version: 2,
   structure: {
     svg: PLACEHOLDER_STRUCTURE_SVG,
-    path: "backend/app/report_assets/structures/metformin-demo.svg",
-    smiles: "CN(C)C(=N)N=C(N)N"
+    path: "backend/app/report_assets/reports/images/structures/metformin-demo.svg",
+    metadata_path: "backend/app/report_assets/reports/images/metadata/metformin-demo.json",
+    smiles: "CN(C)C(=N)N=C(N)N",
+    source_type: "smiles",
+    source_reference: "CN(C)C(=N)N=C(N)N",
+    generated_at: "2025-12-02T18:45:00Z",
+    image_id: "metformin-demo"
   },
   workers: {
     clinical: {

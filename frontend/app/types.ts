@@ -31,10 +31,18 @@ export interface ValidationSummary {
   claim_links: StoryClaimLink[];
 }
 
+export type StructureSource = "smiles" | "inchi" | "pubchem";
+
 export interface StructureAsset {
   svg: string;
   path: string;
   smiles: string;
+  metadata_path?: string;
+  source_type?: StructureSource;
+  source_reference?: string;
+  inchi?: string;
+  generated_at?: string;
+  image_id?: string;
   error?: string;
 }
 
