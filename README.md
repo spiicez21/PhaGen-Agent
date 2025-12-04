@@ -87,7 +87,7 @@ The repo-level `requirements.txt` simply pulls in `backend/requirements.txt` and
    cd D:\PhaGen-Agent
    .\.venv\Scripts\python.exe indexes\build_index.py
    ```
-   This rebuilds the live retriever index at `indexes/chroma/` and, by default, snapshots that build under `indexes/chroma_snapshots/` using a daily timestamp. Use `--cadence monthly` or `--snapshot-name my-run` for custom folders, and pass `--no-snapshot` if you explicitly want the legacy "current only" behavior.
+   This rebuilds the live retriever index at `indexes/chroma/`, reuses embeddings for unchanged passages via the on-disk cache at `indexes/.embedding_cache.json`, and snapshots the run under `indexes/chroma_snapshots/` using a daily timestamp. Use `--cadence monthly` or `--snapshot-name my-run` for custom folders, `--no-snapshot` to skip copies, and `--no-cache`/`--cache-path` if you need to bypass or relocate the embedding cache.
 
 ## Architecture overview
 
@@ -124,7 +124,7 @@ See `docs/architecture.md` for the full sequence diagram and responsibilities pe
 ## Data & indexing pipeline
 
 1. Run the Crawlee project to refresh datasets under `crawler/storage/`.
-2. Execute `indexes/build_index.py` from the repo root (inside `.venv`) to embed new passages into `indexes/chroma/` and emit a daily snapshot under `indexes/chroma_snapshots/`.
+2. Execute `indexes/build_index.py` from the repo root (inside `.venv`) to embed new passages into `indexes/chroma/`, reusing cached embeddings where possible, and emit a daily snapshot under `indexes/chroma_snapshots/`.
 3. Agents read from `indexes/chroma/` by default; to reproduce a historical run, copy or point the retriever at the desired snapshot folder (each includes a `manifest.json` with dataset hash + git commit).
 4. Redeploy/restart workers if the embeddings or retriever settings change so new sources are picked up.
 

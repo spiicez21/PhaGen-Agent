@@ -24,6 +24,7 @@ indexes/*.bin
 indexes/*.chroma
 indexes/chroma
 indexes/chroma_snapshots
+indexes/.embedding_cache.json
 crawler/storage/
 crawler/**/*.dataset
 crawler/**/*.jsonl

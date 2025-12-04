@@ -22,7 +22,7 @@ import shutil
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterable, List
+from typing import Dict, Iterable, List, Optional, Tuple
 
 try:
     import chromadb
@@ -34,11 +34,14 @@ except ImportError as exc:  # pragma: no cover - runtime guard
         "chromadb and sentence-transformers are required. Run 'pip install chromadb sentence-transformers'"
     ) from exc
 
+BASE_DIR = Path(__file__).resolve().parent
 DATASET_DIR = Path(__file__).resolve().parents[1] / "crawler" / "storage" / "datasets" / "default"
-PERSIST_DIR = Path(__file__).resolve().parent / "chroma"
-SNAPSHOT_ROOT = Path(__file__).resolve().parent / "chroma_snapshots"
+PERSIST_DIR = BASE_DIR / "chroma"
+SNAPSHOT_ROOT = BASE_DIR / "chroma_snapshots"
+EMBED_CACHE_PATH = BASE_DIR / ".embedding_cache.json"
 COLLECTION_NAME = "phagen-agentic"
 MANIFEST_NAME = "manifest.json"
+EMBED_MODEL_NAME = "all-MiniLM-L6-v2"
 
 
 def utc_now() -> datetime:
@@ -91,6 +94,17 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Overwrite an existing snapshot that has the same resolved name",
     )
+    parser.add_argument(
+        "--cache-path",
+        type=Path,
+        default=EMBED_CACHE_PATH,
+        help="Path to embedding cache JSON file (default: indexes/.embedding_cache.json)",
+    )
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Disable embedding cache reuse (always re-embed)",
+    )
     return parser.parse_args()
 
 
@@ -118,9 +132,81 @@ def record_to_document(record: dict) -> tuple[str, dict, str]:
     return doc_id, metadata, text
 
 
-def build_index(records: Iterable[dict], persist_dir: Path) -> int:
+def compute_doc_hash(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def ensure_list(vector) -> List[float]:  # type: ignore[override]
+    if isinstance(vector, list):
+        return vector
+    try:
+        return vector.tolist()  # type: ignore[attr-defined]
+    except AttributeError:
+        return list(vector)
+
+
+class EmbeddingCache:
+    def __init__(self, path: Path, model_name: str) -> None:
+        self.path = path
+        self.model_name = model_name
+        self.entries: Dict[str, Dict[str, List[float]]] = {}
+        self.loaded = False
+        self.reused = 0
+        self.created = 0
+        self._load()
+
+    def _load(self) -> None:
+        if not self.path.exists():
+            return
+        try:
+            data = json.loads(self.path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return
+        if data.get("model") != self.model_name:
+            return
+        entries = data.get("entries") or {}
+        self.entries = {
+            key: {"embedding": list(value.get("embedding", []))}
+            for key, value in entries.items()
+            if isinstance(value, dict) and "embedding" in value
+        }
+        self.loaded = True
+
+    def lookup(self, text: str) -> Tuple[str, Optional[List[float]]]:
+        key = compute_doc_hash(text)
+        entry = self.entries.get(key)
+        if entry:
+            self.reused += 1
+            return key, list(entry["embedding"])
+        return key, None
+
+    def store(self, key: str, embedding: List[float]) -> None:
+        self.entries[key] = {"embedding": list(embedding)}
+        self.created += 1
+
+    def save(self) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "model": self.model_name,
+            "entries": self.entries,
+            "updated_at": utc_now().isoformat().replace("+00:00", "Z"),
+        }
+        self.path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+
+def maybe_init_cache(args: argparse.Namespace) -> Optional[EmbeddingCache]:
+    if args.no_cache:
+        return None
+    return EmbeddingCache(args.cache_path, EMBED_MODEL_NAME)
+
+
+def build_index(
+    records: Iterable[dict],
+    persist_dir: Path,
+    embedding_fn: SentenceTransformerEmbeddingFunction,
+    cache: Optional[EmbeddingCache] = None,
+) -> tuple[int, int, int]:
     persist_dir.mkdir(parents=True, exist_ok=True)
-    embedding_fn = SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
     client = chromadb.PersistentClient(path=str(persist_dir))
 
     try:
@@ -136,20 +222,46 @@ def build_index(records: Iterable[dict], persist_dir: Path) -> int:
     documents: List[str] = []
     metadatas: List[dict] = []
     ids: List[str] = []
+    embeddings: List[List[float]] = []
     for record in records:
         doc_id, metadata, text = record_to_document(record)
         if not text:
             continue
+
+        cached_key = None
+        cached_embedding: Optional[List[float]] = None
+        if cache:
+            cached_key, cached_embedding = cache.lookup(text)
+
+        if cached_embedding is None:
+            vector = embedding_fn([text])[0]
+            embedding_values = ensure_list(vector)
+            if cache:
+                cache.store(cached_key or compute_doc_hash(text), embedding_values)
+        else:
+            embedding_values = cached_embedding
+
         documents.append(text)
+        metadata["doc_hash"] = cached_key or compute_doc_hash(text)
         metadatas.append(metadata)
         ids.append(doc_id)
+        embeddings.append(embedding_values)
 
     if not documents:
         raise SystemExit("No documents found to index.")
 
-    collection.add(documents=documents, metadatas=metadatas, ids=ids)
-    print(f"Indexed {len(documents)} documents into {persist_dir}")
-    return len(documents)
+    collection.add(
+        documents=documents,
+        metadatas=metadatas,
+        ids=ids,
+        embeddings=embeddings,
+    )
+    reused = cache.reused if cache else 0
+    created = cache.created if cache else len(documents)
+    print(
+        f"Indexed {len(documents)} documents into {persist_dir} (embeddings reused: {reused}, newly encoded: {created})"
+    )
+    return len(documents), reused, created
 
 
 def sanitize_snapshot_name(name: str) -> str:
@@ -240,7 +352,17 @@ def cleanup_snapshots(keep_daily: int, keep_monthly: int) -> list[str]:
 def main() -> None:
     args = parse_args()
     dataset_dir = args.dataset.resolve()
-    record_count = build_index(iter_records(dataset_dir), PERSIST_DIR)
+    embedding_fn = SentenceTransformerEmbeddingFunction(model_name=EMBED_MODEL_NAME)
+    cache = maybe_init_cache(args)
+    record_count, reused, created = build_index(
+        iter_records(dataset_dir),
+        PERSIST_DIR,
+        embedding_fn,
+        cache=cache,
+    )
+
+    if cache and not args.no_cache:
+        cache.save()
 
     if args.no_snapshot:
         return
@@ -255,9 +377,12 @@ def main() -> None:
         "cadence": args.cadence,
         "created_at": utc_now().isoformat().replace("+00:00", "Z"),
         "records_indexed": record_count,
+        "embeddings_reused": reused,
+        "embeddings_encoded": created,
         "dataset_dir": str(dataset_dir),
         "dataset_hash": digest,
         "git_commit": current_git_commit(),
+        "embedding_model": EMBED_MODEL_NAME,
     }
     write_manifest(snapshot_dir, manifest)
     print(f"Snapshot '{resolved_name}' saved under {snapshot_dir}")
