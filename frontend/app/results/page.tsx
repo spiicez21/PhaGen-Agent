@@ -7,6 +7,13 @@ export default function ResultsPage() {
   const validation = SAMPLE_PAYLOAD.validation;
   const reportVersion = SAMPLE_PAYLOAD.report_version ?? 1;
   const structure = SAMPLE_PAYLOAD.structure;
+  const quality = SAMPLE_PAYLOAD.quality;
+
+  const qualityStatusTone: Record<string, string> = {
+    pass: "bg-emerald-100 text-emerald-800",
+    needs_attention: "bg-amber-100 text-amber-800",
+    investigate: "bg-rose-100 text-rose-800"
+  };
 
   return (
     <div className="section-stack">
@@ -76,6 +83,82 @@ export default function ResultsPage() {
           {structure.metadata_path && (
             <p className="subtle-text">Provenance: {structure.metadata_path}</p>
           )}
+        </section>
+      )}
+
+      {quality && (
+        <section className="section-card space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="eyebrow">Quality guardrails</p>
+              <h2 className="text-xl font-semibold">Retrieval health</h2>
+            </div>
+            <span
+              className={`px-3 py-1 rounded-full text-sm font-semibold ${qualityStatusTone[quality.status] ?? "bg-neutral-200 text-neutral-800"}`}
+            >
+              {quality.status === "pass"
+                ? "Pass"
+                : quality.status === "needs_attention"
+                  ? "Needs attention"
+                  : "Investigate"}
+            </span>
+          </div>
+          <p className="subtle-text">
+            Metrics and alerts reflect how much evidence each worker gathered. Use them to catch thin coverage or anomalous retrieval runs before sharing results.
+          </p>
+
+          {Object.keys(quality.alerts).length ? (
+            <div className="space-y-3">
+              {Object.entries(quality.alerts).map(([worker, alerts]) => (
+                <article key={worker} className="rounded-2xl border border-amber-200 bg-amber-50 p-3">
+                  <header className="flex items-center gap-2 text-sm font-semibold text-amber-900">
+                    <span className="badge">{worker}</span>
+                    <span>Alerts</span>
+                  </header>
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-900">
+                    {alerts.map((alert, index) => (
+                      <li key={`${worker}-alert-${index}`}>{alert}</li>
+                    ))}
+                  </ul>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-2xl border border-emerald-100 bg-emerald-50 p-3 text-sm text-emerald-900">
+              All workers met the minimum evidence thresholds. No alerts at this time.
+            </p>
+          )}
+
+          <div className="grid-two">
+            {Object.entries(quality.metrics).map(([worker, metrics]) => (
+              <article key={worker} className="space-y-2 rounded-2xl border border-neutral-200 p-4">
+                <header className="flex items-center justify-between">
+                  <span className="badge">{worker}</span>
+                  <span className="text-sm text-neutral-500">
+                    {metrics.evidence_count} evidence · {metrics.unique_sources} sources
+                  </span>
+                </header>
+                <dl className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <dt className="subtle-text">Coverage</dt>
+                    <dd className="font-semibold">{(metrics.coverage_ratio * 100).toFixed(0)}%</dd>
+                  </div>
+                  <div>
+                    <dt className="subtle-text">Precision proxy</dt>
+                    <dd className="font-semibold">{(metrics.precision_proxy * 100).toFixed(0)}%</dd>
+                  </div>
+                  <div>
+                    <dt className="subtle-text">Passages pulled</dt>
+                    <dd className="font-semibold">{metrics.final_passages}/{metrics.retriever_top_k}</dd>
+                  </div>
+                  <div>
+                    <dt className="subtle-text">High-confidence cites</dt>
+                    <dd className="font-semibold">{metrics.high_conf_evidence}</dd>
+                  </div>
+                </dl>
+              </article>
+            ))}
+          </div>
         </section>
       )}
 
