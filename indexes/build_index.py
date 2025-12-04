@@ -20,9 +20,10 @@ import json
 import re
 import shutil
 import subprocess
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 try:
     import chromadb
@@ -42,6 +43,8 @@ EMBED_CACHE_PATH = BASE_DIR / ".embedding_cache.json"
 COLLECTION_NAME = "phagen-agentic"
 MANIFEST_NAME = "manifest.json"
 EMBED_MODEL_NAME = "all-MiniLM-L6-v2"
+DEDUP_SOURCE_TYPES = {"clinical", "literature"}
+SOURCE_PRIORITY = {"clinical": 2, "literature": 1}
 
 
 def utc_now() -> datetime:
@@ -136,6 +139,13 @@ def compute_doc_hash(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+@dataclass
+class PreparedRecord:
+    doc_id: str
+    metadata: dict
+    text: str
+
+
 def ensure_list(vector) -> List[float]:  # type: ignore[override]
     if isinstance(vector, list):
         return vector
@@ -143,6 +153,79 @@ def ensure_list(vector) -> List[float]:  # type: ignore[override]
         return vector.tolist()  # type: ignore[attr-defined]
     except AttributeError:
         return list(vector)
+
+
+def prepare_records(records: Iterable[dict]) -> List[PreparedRecord]:
+    prepared: List[PreparedRecord] = []
+    for record in records:
+        doc_id, metadata, text = record_to_document(record)
+        if not text:
+            continue
+        metadata = dict(metadata)
+        metadata.setdefault("source_type", record.get("source_type", metadata.get("source_type", "unknown")))
+        metadata["doc_hash"] = metadata.get("doc_hash") or compute_doc_hash(text)
+        prepared.append(PreparedRecord(doc_id=doc_id, metadata=metadata, text=text))
+    return prepared
+
+
+def apply_dedup(records: Sequence[PreparedRecord]) -> Tuple[List[PreparedRecord], dict]:
+    keep_flags = [True] * len(records)
+    seen: Dict[str, Tuple[int, PreparedRecord]] = {}
+    skipped = 0
+    replaced = 0
+
+    for idx, rec in enumerate(records):
+        source_type = rec.metadata.get("source_type", "unknown")
+        if source_type not in DEDUP_SOURCE_TYPES:
+            continue
+        dedup_key = rec.metadata.get("doc_hash") or compute_doc_hash(rec.text)
+        existing = seen.get(dedup_key)
+        if existing is None:
+            seen[dedup_key] = (idx, rec)
+            continue
+
+        existing_idx, existing_rec = existing
+        existing_priority = SOURCE_PRIORITY.get(existing_rec.metadata.get("source_type", "unknown"), 0)
+        new_priority = SOURCE_PRIORITY.get(source_type, 0)
+
+        if new_priority > existing_priority:
+            keep_flags[existing_idx] = False
+            existing_rec.metadata.setdefault("dedup", {})
+            existing_rec.metadata["dedup"].update(
+                {
+                    "duplicate_of": rec.doc_id,
+                    "reason": "replaced-by-higher-priority",
+                }
+            )
+            rec.metadata.setdefault("dedup", {})
+            rec.metadata["dedup"].update(
+                {
+                    "preferred_over": existing_rec.doc_id,
+                    "reason": "higher-priority-source",
+                }
+            )
+            seen[dedup_key] = (idx, rec)
+            replaced += 1
+        else:
+            keep_flags[idx] = False
+            rec.metadata.setdefault("dedup", {})
+            rec.metadata["dedup"].update(
+                {
+                    "duplicate_of": existing_rec.doc_id,
+                    "reason": "lower-priority-source",
+                }
+            )
+            skipped += 1
+
+    filtered = [rec for rec, keep in zip(records, keep_flags) if keep]
+    stats = {
+        "evaluated": len(records),
+        "kept": len(filtered),
+        "duplicates_skipped": skipped,
+        "duplicates_replaced": replaced,
+        "source_types": sorted(DEDUP_SOURCE_TYPES),
+    }
+    return filtered, stats
 
 
 class EmbeddingCache:
@@ -172,8 +255,8 @@ class EmbeddingCache:
         }
         self.loaded = True
 
-    def lookup(self, text: str) -> Tuple[str, Optional[List[float]]]:
-        key = compute_doc_hash(text)
+    def lookup(self, text: str, key: Optional[str] = None) -> Tuple[str, Optional[List[float]]]:
+        key = key or compute_doc_hash(text)
         entry = self.entries.get(key)
         if entry:
             self.reused += 1
@@ -201,7 +284,7 @@ def maybe_init_cache(args: argparse.Namespace) -> Optional[EmbeddingCache]:
 
 
 def build_index(
-    records: Iterable[dict],
+    records: Sequence[PreparedRecord],
     persist_dir: Path,
     embedding_fn: SentenceTransformerEmbeddingFunction,
     cache: Optional[EmbeddingCache] = None,
@@ -224,14 +307,14 @@ def build_index(
     ids: List[str] = []
     embeddings: List[List[float]] = []
     for record in records:
-        doc_id, metadata, text = record_to_document(record)
-        if not text:
-            continue
+        doc_id = record.doc_id
+        metadata = dict(record.metadata)
+        text = record.text
 
-        cached_key = None
+        cached_key = metadata.get("doc_hash")
         cached_embedding: Optional[List[float]] = None
         if cache:
-            cached_key, cached_embedding = cache.lookup(text)
+            cached_key, cached_embedding = cache.lookup(text, cached_key)
 
         if cached_embedding is None:
             vector = embedding_fn([text])[0]
@@ -242,7 +325,7 @@ def build_index(
             embedding_values = cached_embedding
 
         documents.append(text)
-        metadata["doc_hash"] = cached_key or compute_doc_hash(text)
+        metadata["doc_hash"] = cached_key or metadata.get("doc_hash") or compute_doc_hash(text)
         metadatas.append(metadata)
         ids.append(doc_id)
         embeddings.append(embedding_values)
@@ -354,8 +437,10 @@ def main() -> None:
     dataset_dir = args.dataset.resolve()
     embedding_fn = SentenceTransformerEmbeddingFunction(model_name=EMBED_MODEL_NAME)
     cache = maybe_init_cache(args)
+    prepared_records = prepare_records(iter_records(dataset_dir))
+    deduped_records, dedup_stats = apply_dedup(prepared_records)
     record_count, reused, created = build_index(
-        iter_records(dataset_dir),
+        deduped_records,
         PERSIST_DIR,
         embedding_fn,
         cache=cache,
@@ -379,6 +464,7 @@ def main() -> None:
         "records_indexed": record_count,
         "embeddings_reused": reused,
         "embeddings_encoded": created,
+        "dedup": dedup_stats,
         "dataset_dir": str(dataset_dir),
         "dataset_hash": digest,
         "git_commit": current_git_commit(),

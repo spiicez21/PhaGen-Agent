@@ -30,6 +30,7 @@
    - Pushes normalized docs to dataset or disk for indexing.
    - Section 5 normalization path strips boilerplate, redacts light PII, and chunks sources into metadata-rich passages before indexing.
    - Domain budgets enforce per-host page caps (with logs + dataset annotations) so we stay polite beyond robots.txt.
+   - Index builder deduplicates overlapping clinical/literature passages so the retriever surfaces a single canonical chunk per evidence item.
 
 5. **Infra**
    - Docker Compose (coming soon) wires Postgres, MinIO, Ollama, backend, and frontend.

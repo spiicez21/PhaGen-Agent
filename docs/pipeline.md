@@ -98,6 +98,7 @@ Index Management:
 - Snapshot versioning (`index_v1`, `index_v2`, `index_v3`)  
 - Incremental rebuilds  
 - Deduplication  
+- Cross-corpus deduplication drops lower-priority literature passages when identical clinical evidence exists (priority map lives in `indexes/build_index.py`).
 - Embedding cache (`indexes/.embedding_cache.json`) stores MiniLM vectors keyed by doc hash so `indexes/build_index.py` only encodes new or changed passages
 - `indexes/build_index.py` now emits daily (default) or monthly snapshots under `indexes/chroma_snapshots/` with `manifest.json` (dataset hash + git commit) while keeping the active retriever under `indexes/chroma/`.
 
