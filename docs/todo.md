@@ -34,6 +34,7 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - Report versioning now tracks V1/V2 snapshots per molecule for downstream audits.
 - Lite fallback summarizer now emits a multi-line innovation story when the LLM synthesis path is unavailable.
 - RDKit rendering now materializes SMILES into SVG assets saved under `backend/app/report_assets/reports/images/structures/` with paired provenance JSON in `.../metadata/`, exposes `payload.structure` metadata (svg/path/metadata_path/smiles/source fields/image_id), and embeds the preview in both the frontend dashboard and PDF export.
+- RDKit canonical rendering now has pytest-based visual regression tests with baseline SVGs to guard against future RDKit changes.
 
 ### Phase UI — Experience & admin
 - Landing hero, molecule intake, job status timeline, innovation story summary, and multi-panel evidence dashboard now reflect ~70% of the UI blueprint.
@@ -43,7 +44,6 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 
 ## 🔜 Pending
 ### Phase 4 — Aggregation & reporting
-- [ ] Add RDKit unit tests for canonical rendering (visual diff baseline images).
 - [ ] PubChem REST fallback for structure images if RDKit fails to parse SMILES or CID.
 
 ### Phase UI — Experience & admin
