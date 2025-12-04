@@ -49,6 +49,7 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - Crawlee normalization pipeline now strips boilerplate, redacts PII, and chunks sources into metadata-rich passages per Section 5 guidance, feeding indexes with deterministic chunk IDs + redaction stats.
 - Index snapshotter now runs via `indexes/build_index.py` (daily by default, monthly optional) and writes timestamped copies with manifests (dataset hash, git commit, record counts) under `indexes/chroma_snapshots/` while keeping the live retriever under `indexes/chroma/`.
 - Embedding cache now stores MiniLM vectors keyed by doc hash in `indexes/.embedding_cache.json`, letting the index builder reuse embeddings for unchanged passages and only encode the delta.
+- Domain-level crawl budgets now cap HTML fetches per host (default 2 unless overridden), log usage, and annotate dataset entries when a source is skipped for exceeding its quota.
 
 ## 🔜 Pending
 ### Phase UI — Experience & admin
@@ -61,7 +62,6 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - [ ] Add "Request structure" action in molecule intake to create SMILES → RDKit render.
 
 ### Data & infra follow-ups
-- [ ] Domain-level crawl budgets to limit pages per source.
 - [ ] Evidence deduplication across clinical/literature corpora.
 - [ ] Add `rdkit-service` Docker image (conda + rdkit + pillow) to `docker-compose.yml` for on-demand rendering.
 - [ ] Add `smiles-normalizer` job that canonicalizes SMILES/InChI via RDKit before indexing/synonym expansion.

@@ -189,5 +189,6 @@ If PDF export fails, the backend raises a runtime error that tells you whether `
 
 - The crawler now follows an **API-first → robots.txt-validated crawl** pipeline. Each source tries to load mock API data first (`crawler/mock-data/`), then falls back to HTML only if `robots.txt` allows access.
 - Section 5 normalization now strips boilerplate, redacts simple PII, and emits deterministic chunk metadata (chunk ID, char spans, redaction counters) via `crawler/src/normalize.ts` before datasets reach the indexer.
+- Domain-level crawl budgets cap HTML fetches per host (default 2 pages unless overridden in `crawler/src/index.ts`) and annotate dataset entries when a source is skipped due to quota exhaustion.
 - `crawler/src/robots.ts` caches per-domain policies (allow/deny + crawl-delay) using the `PhaGenBot/1.0` user agent. Update the user agent or contact email there before running against live sites.
 - Crawled artifacts are written to `crawler/storage/` (ignored by git) and capped at 5 KB snippets for safety. Extend the schema before indexing into FAISS/Chroma.
