@@ -9,8 +9,8 @@ from .base import Worker
 
 
 class ClinicalWorker(Worker):
-    def __init__(self, retriever, llm=None):
-        super().__init__("clinical", retriever, llm)
+    def __init__(self, retriever, llm=None, temperature: float | None = None):
+        super().__init__("clinical", retriever, llm, temperature=temperature)
 
     def build_summary(self, request: WorkerRequest, passages: List[dict]) -> WorkerResult:
         trials = self._extract_trials(passages)

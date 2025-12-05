@@ -9,6 +9,7 @@ from typing import Dict, List
 
 from .api_budget import api_budget_monitor, summarize_budget_status
 from .llm import LLMClient, LLMClientError, format_structured_context
+from .temperature import resolve_master_temperature, resolve_worker_temperatures
 from .models import (
     MasterResult,
     MasterRun,
@@ -80,16 +81,35 @@ class MasterAgent:
         synonym_expander: SynonymExpander | None = None,
         worker_timeouts: Dict[str, float] | None = None,
         worker_retry_budget: Dict[str, int] | None = None,
+        worker_temperatures: Dict[str, float] | None = None,
+        master_temperature: float | None = None,
     ) -> None:
         retriever = Retriever(top_k=top_k, context_tokens=context_tokens)
         self.context_tokens = context_tokens
         self.llm = llm_client or LLMClient()
         self.synonyms = synonym_expander or SynonymExpander()
+        self.worker_temperatures = resolve_worker_temperatures(worker_temperatures)
         self.workers = {
-            "clinical": ClinicalWorker(retriever, self.llm),
-            "patent": PatentWorker(retriever, self.llm),
-            "literature": LiteratureWorker(retriever, self.llm),
-            "market": MarketWorker(retriever, self.llm),
+            "clinical": ClinicalWorker(
+                retriever,
+                self.llm,
+                temperature=self.worker_temperatures.get("clinical"),
+            ),
+            "patent": PatentWorker(
+                retriever,
+                self.llm,
+                temperature=self.worker_temperatures.get("patent"),
+            ),
+            "literature": LiteratureWorker(
+                retriever,
+                self.llm,
+                temperature=self.worker_temperatures.get("literature"),
+            ),
+            "market": MarketWorker(
+                retriever,
+                self.llm,
+                temperature=self.worker_temperatures.get("market"),
+            ),
         }
         self.worker_timeouts = {
             **self.DEFAULT_WORKER_TIMEOUTS,
@@ -99,6 +119,7 @@ class MasterAgent:
             **self.DEFAULT_RETRY_BUDGET,
             **(worker_retry_budget or {}),
         }
+        self.master_temperature = resolve_master_temperature(master_temperature)
         self._logger = logging.getLogger(__name__)
 
     def run(
@@ -332,7 +353,7 @@ class MasterAgent:
                 prompt=user_prompt,
                 system_prompt=
                 "Synthesize cross-domain biotech diligence into a crisp Innovation Story and rubric-based recommendation.",
-                temperature=0.2,
+                temperature=self.master_temperature,
                 max_tokens=400,
             )
             parsed = self._parse_master_response(raw)

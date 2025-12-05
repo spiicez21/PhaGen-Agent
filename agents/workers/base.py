@@ -9,6 +9,7 @@ from ..api_budget import API_PROVIDER_FOR_WORKER, api_budget_monitor
 from ..llm import LLMClient, LLMClientError, format_structured_context
 from ..models import EvidenceItem, WorkerRequest, WorkerResult
 from ..retrieval import Retriever
+from ..temperature import resolve_worker_temperature
 
 
 logger = logging.getLogger(__name__)
@@ -35,10 +36,12 @@ class Worker(ABC):
         name: str,
         retriever: Retriever,
         llm_client: Optional[LLMClient] = None,
+        temperature: float | None = None,
     ) -> None:
         self.name = name
         self.retriever = retriever
         self.llm = llm_client
+        self.temperature = resolve_worker_temperature(name, temperature)
 
     @abstractmethod
     def build_summary(self, request: WorkerRequest, passages: List[dict]) -> WorkerResult:
@@ -229,7 +232,7 @@ class Worker(ABC):
                 prompt=user_prompt,
                 system_prompt=
                 "You are an expert analyst in a multi-agent molecule repurposing pipeline.",
-                temperature=0.15,
+                temperature=self.temperature,
                 max_tokens=280,
             )
         except LLMClientError as exc:  # pragma: no cover - runtime dependency

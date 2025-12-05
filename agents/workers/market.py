@@ -8,8 +8,8 @@ from .base import Worker
 
 
 class MarketWorker(Worker):
-    def __init__(self, retriever, llm=None):
-        super().__init__("market", retriever, llm)
+    def __init__(self, retriever, llm=None, temperature: float | None = None):
+        super().__init__("market", retriever, llm, temperature=temperature)
 
     def build_summary(self, request: WorkerRequest, passages: List[dict]) -> WorkerResult:
         market_data = self._extract_market(passages)
