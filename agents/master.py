@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeou
 from dataclasses import asdict
 from typing import Dict, List
 
+from .api_budget import api_budget_monitor, summarize_budget_status
 from .llm import LLMClient, LLMClientError, format_structured_context
 from .models import (
     MasterResult,
@@ -410,10 +411,12 @@ class MasterAgent:
             claim_links,
             evidence_catalog,
         )
+        api_budgets = api_budget_monitor.snapshot()
         payload["validation"] = self._build_validation_summary(claim_links)
         payload["quality"] = self._build_quality_summary(
             worker_outputs=result.workers,
             story_checks=story_checks,
+            api_budgets=api_budgets,
         )
         payload["workers"] = workers
         return payload
@@ -549,6 +552,7 @@ class MasterAgent:
         self,
         worker_outputs: Dict[str, WorkerResult],
         story_checks: dict | None = None,
+        api_budgets: dict | None = None,
     ) -> dict:
         metrics: Dict[str, dict] = {}
         alerts: Dict[str, List[str]] = {}
@@ -564,6 +568,10 @@ class MasterAgent:
             status = "investigate" if has_anomaly else "needs_attention"
         if story_checks:
             status = self._max_quality_status(status, story_checks.get("status", "pass"))
+        if api_budgets:
+            budget_status = summarize_budget_status(api_budgets)
+            if budget_status:
+                status = self._max_quality_status(status, budget_status)
         summary = {
             "status": status,
             "metrics": metrics,
@@ -571,6 +579,8 @@ class MasterAgent:
         }
         if story_checks:
             summary["story_checks"] = story_checks
+        if api_budgets:
+            summary["api_budgets"] = api_budgets
         return summary
 
     def _detect_story_gaps(

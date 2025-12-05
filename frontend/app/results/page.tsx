@@ -15,6 +15,12 @@ export default function ResultsPage() {
     investigate: "bg-rose-100 text-rose-800"
   };
 
+  const apiBudgetTone: Record<string, string> = {
+    ok: "bg-emerald-100 text-emerald-800",
+    warning: "bg-amber-100 text-amber-800",
+    exceeded: "bg-rose-100 text-rose-800"
+  };
+
   return (
     <div className="section-stack">
       <section className="grid-two">
@@ -197,6 +203,62 @@ export default function ResultsPage() {
                   All innovation-story claims have citations with sufficient lexical overlap. No hallucination risk detected.
                 </p>
               )}
+            </div>
+          )}
+
+          {quality.api_budgets && (
+            <div className="space-y-3 rounded-2xl border border-neutral-200 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="eyebrow">API budgets</p>
+                  <h3 className="text-lg font-semibold">NCBI & OpenFDA quotas</h3>
+                </div>
+                <span className="text-sm text-neutral-500">
+                  Live view of minute/day usage vs documented limits
+                </span>
+              </div>
+              <div className="grid-two">
+                {Object.entries(quality.api_budgets).map(([provider, budget]) => (
+                  <article key={provider} className="space-y-2 rounded-2xl border border-neutral-200 p-4">
+                    <header className="flex items-center justify-between">
+                      <span className="badge">{provider}</span>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs font-semibold ${apiBudgetTone[budget.status] ?? "bg-neutral-200 text-neutral-800"}`}
+                      >
+                        {budget.status === "ok"
+                          ? "Within budget"
+                          : budget.status === "warning"
+                            ? "Near limit"
+                            : "Exceeded"}
+                      </span>
+                    </header>
+                    <p className="text-sm text-neutral-600">{budget.label}</p>
+                    <dl className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <dt className="subtle-text">Minute window</dt>
+                        <dd className="font-semibold">
+                          {budget.minute_used}/{budget.per_minute_limit}
+                        </dd>
+                        <p className="text-xs text-neutral-500">
+                          Resets in {budget.reset_in_seconds.minute}s
+                        </p>
+                      </div>
+                      <div>
+                        <dt className="subtle-text">Day window</dt>
+                        <dd className="font-semibold">
+                          {budget.day_used}/{budget.per_day_limit}
+                        </dd>
+                        <p className="text-xs text-neutral-500">
+                          Resets in {Math.round(budget.reset_in_seconds.day / 3600)}h
+                        </p>
+                      </div>
+                    </dl>
+                    <p className="text-xs text-neutral-500">
+                      Last call {budget.last_call_at ?? "n/a"} · Lifetime {budget.lifetime_calls} requests
+                    </p>
+                  </article>
+                ))}
+              </div>
             </div>
           )}
         </section>

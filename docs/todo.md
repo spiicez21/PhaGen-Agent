@@ -61,6 +61,7 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - Retrieval precision coverage is now measured per worker (queries attempted, passages gathered, evidence counts, precision proxy), and guardrails raise alerts for low evidence, weak coverage, or anomalous retrieval gaps. Alerts and metrics ship in each job payload under the `quality` block so the UI/API can flag risky runs.
 - Docker Compose stack + GitHub Actions workflow (Section 10) now mirror the ops plan: `infra/docker-compose.yml` boots Postgres/MinIO/Ollama/RDKit/backend/frontend together, and `.github/workflows/ci.yml` runs backend pytest, frontend lint, and `docker compose build` so image builds and tests gate every PR.
 - Citation-gap detector now scans every innovation-story claim against its cited evidence, tracking lexical overlap and numeric support so hallucination-prone sentences trigger explicit alerts in the quality payload + UI.
+- API call budget monitor now tracks NCBI/OpenFDA usage per minute/day, escalates status into the job quality payload, and exposes a UI panel warning reviewers before rate-limit breaches.
 
 ## 🔜 Pending
 ### Phase UI — Experience & admin
@@ -74,7 +75,6 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 
 ### Quality, guardrails, and ops
 - [ ] Prepare the hackathon demo script, slides, and fallback assets outlined in Section 11.
-- [ ] API call budget monitor for NCBI/OpenFDA rate limits.
 - [ ] Standardize LLM temperature per worker for consistent tone.
 - [ ] Build an evals suite (5–10 sample molecules with expected outputs).
 - [ ] SLA-style logging: latency, token usage, and failure counts per worker.

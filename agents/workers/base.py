@@ -5,6 +5,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
+from ..api_budget import API_PROVIDER_FOR_WORKER, api_budget_monitor
 from ..llm import LLMClient, LLMClientError, format_structured_context
 from ..models import EvidenceItem, WorkerRequest, WorkerResult
 from ..retrieval import Retriever
@@ -49,6 +50,7 @@ class Worker(ABC):
         gathered: List[dict] = []
         seen_ids: set[str] = set()
         for term in queries:
+            self._record_api_budget()
             results = self.retriever.search(
                 query=term,
                 source_type=self.name,
@@ -67,6 +69,7 @@ class Worker(ABC):
                 break
 
         if not gathered:
+            self._record_api_budget()
             gathered = self.retriever.search(
                 query=request.molecule,
                 source_type=self.name,
@@ -180,6 +183,11 @@ class Worker(ABC):
         if unique_sources <= 1 and final_passages >= 2:
             alerts.append("Evidence monoculture (single unique source)")
         return alerts
+
+    def _record_api_budget(self) -> None:
+        provider = API_PROVIDER_FOR_WORKER.get(self.name)
+        if provider:
+            api_budget_monitor.record(provider)
 
     # LLM helpers ----------------------------------------------------
     def _format_passages(self, passages: List[dict], limit: int = 5) -> str:

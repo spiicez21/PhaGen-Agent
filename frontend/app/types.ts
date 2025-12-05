@@ -204,9 +204,29 @@ export interface StoryQualitySummary {
   flagged_claims: StoryQualityFlag[];
 }
 
+export type BudgetHealth = "ok" | "warning" | "exceeded";
+
+export interface ApiBudgetSnapshot {
+  label: string;
+  per_minute_limit: number;
+  per_day_limit: number;
+  minute_used: number;
+  minute_remaining: number;
+  day_used: number;
+  day_remaining: number;
+  status: BudgetHealth;
+  last_call_at?: string | null;
+  reset_in_seconds: {
+    minute: number;
+    day: number;
+  };
+  lifetime_calls: number;
+}
+
 export interface QualitySummary {
   status: QualityStatus;
   metrics: Record<string, WorkerQualityMetrics>;
   alerts: Record<string, string[]>;
   story_checks?: StoryQualitySummary;
+  api_budgets?: Record<string, ApiBudgetSnapshot>;
 }
