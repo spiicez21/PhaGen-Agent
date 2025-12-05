@@ -188,8 +188,25 @@ export interface WorkerQualityMetrics {
 
 export type QualityStatus = "pass" | "needs_attention" | "investigate";
 
+export interface StoryQualityFlag {
+  claim_id: string;
+  claim_text: string;
+  reason: string;
+  support_score: number;
+  evidence_ids: string[];
+}
+
+export interface StoryQualitySummary {
+  status: QualityStatus;
+  claims_total: number;
+  claims_flagged: number;
+  citation_gap_ratio: number;
+  flagged_claims: StoryQualityFlag[];
+}
+
 export interface QualitySummary {
   status: QualityStatus;
   metrics: Record<string, WorkerQualityMetrics>;
   alerts: Record<string, string[]>;
+  story_checks?: StoryQualitySummary;
 }

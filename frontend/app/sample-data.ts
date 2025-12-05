@@ -221,6 +221,21 @@ export const SAMPLE_PAYLOAD: MasterPayload = {
         "Low evidence coverage (1/2)",
         "Evidence monoculture (single unique source)"
       ]
+    },
+    story_checks: {
+      status: "needs_attention",
+      claims_total: 3,
+      claims_flagged: 1,
+      citation_gap_ratio: 0.333,
+      flagged_claims: [
+        {
+          claim_id: "claim-2",
+          claim_text: "Mechanism-of-action literature reinforces TGF-beta modulation for broader label expansion.",
+          reason: "Low lexical overlap (0.18)",
+          support_score: 0.18,
+          evidence_ids: ["literature-1"]
+        }
+      ]
     }
   },
   validation: {
@@ -448,6 +463,21 @@ export const METFORMIN_PAYLOAD: MasterPayload = {
       clinical: ["Low evidence coverage (1/2)", "Evidence monoculture (single unique source)"],
       patent: ["Low precision proxy (0.44 < 0.50)"],
       market: ["Low precision proxy (0.48 < 0.50)"]
+    },
+    story_checks: {
+      status: "investigate",
+      claims_total: 2,
+      claims_flagged: 1,
+      citation_gap_ratio: 0.5,
+      flagged_claims: [
+        {
+          claim_id: "claim-2",
+          claim_text: "Commercial upside depends on payer acceptance of metabolic-fibrosis surrogates.",
+          reason: "No citations linked to claim",
+          support_score: 0,
+          evidence_ids: []
+        }
+      ]
     }
   },
   validation: {

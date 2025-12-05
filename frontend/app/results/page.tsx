@@ -159,6 +159,46 @@ export default function ResultsPage() {
               </article>
             ))}
           </div>
+
+          {quality.story_checks && (
+            <div className="space-y-3 rounded-2xl border border-neutral-200 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="eyebrow">Story guardrail</p>
+                  <h3 className="text-lg font-semibold">Hallucination scan</h3>
+                </div>
+                <span
+                  className={`px-3 py-1 rounded-full text-sm font-semibold ${qualityStatusTone[quality.story_checks.status] ?? "bg-neutral-200 text-neutral-800"}`}
+                >
+                  {quality.story_checks.status === "pass"
+                    ? "Pass"
+                    : quality.story_checks.status === "needs_attention"
+                      ? "Needs attention"
+                      : "Investigate"}
+                </span>
+              </div>
+              <p className="subtle-text">
+                Every innovation-story sentence is compared against its cited evidence. Low lexical overlap or missing citations are flagged so reviewers can pause before sharing results.
+              </p>
+              {quality.story_checks.flagged_claims.length ? (
+                <ul className="space-y-3">
+                  {quality.story_checks.flagged_claims.map((claim) => (
+                    <li key={claim.claim_id} className="rounded-2xl border border-rose-200 bg-rose-50 p-3">
+                      <p className="text-sm font-semibold text-rose-900">{claim.claim_text}</p>
+                      <p className="text-sm text-rose-900">{claim.reason}</p>
+                      <p className="text-xs text-rose-800">
+                        Support score {(claim.support_score * 100).toFixed(0)}% · Evidence IDs {claim.evidence_ids.length ? claim.evidence_ids.join(", ") : "None"}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="rounded-2xl border border-emerald-100 bg-emerald-50 p-3 text-sm text-emerald-900">
+                  All innovation-story claims have citations with sufficient lexical overlap. No hallucination risk detected.
+                </p>
+              )}
+            </div>
+          )}
         </section>
       )}
 

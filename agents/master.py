@@ -43,6 +43,33 @@ class MasterAgent:
         "literature": 1,
         "market": 1,
     }
+    STORY_SUPPORT_THRESHOLD = 0.2
+    STORY_STOPWORDS = {
+        "the",
+        "and",
+        "with",
+        "from",
+        "that",
+        "this",
+        "have",
+        "has",
+        "will",
+        "into",
+        "than",
+        "once",
+        "when",
+        "over",
+        "after",
+        "more",
+        "less",
+        "such",
+        "also",
+        "upon",
+        "into",
+        "case",
+        "cases",
+        "data",
+    }
 
     def __init__(
         self,
@@ -372,14 +399,22 @@ class MasterAgent:
     def serialize(self, result: MasterResult) -> dict:
         payload = asdict(result)
         workers: Dict[str, Dict[str, object]] = payload.get("workers", {})
-        worker_evidence_map = self._attach_evidence_ids(workers)
+        worker_evidence_map, evidence_catalog = self._attach_evidence_ids(workers)
         claim_links = self._link_story_claims(
             payload.get("innovation_story", ""),
             workers,
             worker_evidence_map,
         )
+        story_checks = self._detect_story_gaps(
+            payload.get("innovation_story", ""),
+            claim_links,
+            evidence_catalog,
+        )
         payload["validation"] = self._build_validation_summary(claim_links)
-        payload["quality"] = self._build_quality_summary(worker_outputs=result.workers)
+        payload["quality"] = self._build_quality_summary(
+            worker_outputs=result.workers,
+            story_checks=story_checks,
+        )
         payload["workers"] = workers
         return payload
 
@@ -432,8 +467,9 @@ class MasterAgent:
     # Validation helpers ----------------------------------------------
     def _attach_evidence_ids(
         self, workers: Dict[str, Dict[str, object]]
-    ) -> Dict[str, List[str]]:
+    ) -> tuple[Dict[str, List[str]], Dict[str, dict]]:
         worker_map: Dict[str, List[str]] = {}
+        catalog: Dict[str, dict] = {}
         for worker_name, data in workers.items():
             evidence_records = list(data.get("evidence", []) or [])
             enriched: List[dict] = []
@@ -444,9 +480,10 @@ class MasterAgent:
                 enriched_record["evidence_id"] = evidence_id
                 enriched.append(enriched_record)
                 evidence_ids.append(evidence_id)
+                catalog[evidence_id] = enriched_record
             data["evidence"] = enriched
             worker_map[worker_name] = evidence_ids
-        return worker_map
+        return worker_map, catalog
 
     def _link_story_claims(
         self,
@@ -508,7 +545,11 @@ class MasterAgent:
             "claim_links": claim_links,
         }
 
-    def _build_quality_summary(self, worker_outputs: Dict[str, WorkerResult]) -> dict:
+    def _build_quality_summary(
+        self,
+        worker_outputs: Dict[str, WorkerResult],
+        story_checks: dict | None = None,
+    ) -> dict:
         metrics: Dict[str, dict] = {}
         alerts: Dict[str, List[str]] = {}
         has_anomaly = False
@@ -521,8 +562,106 @@ class MasterAgent:
         status = "pass"
         if alerts:
             status = "investigate" if has_anomaly else "needs_attention"
-        return {
+        if story_checks:
+            status = self._max_quality_status(status, story_checks.get("status", "pass"))
+        summary = {
             "status": status,
             "metrics": metrics,
             "alerts": alerts,
         }
+        if story_checks:
+            summary["story_checks"] = story_checks
+        return summary
+
+    def _detect_story_gaps(
+        self,
+        story: str,
+        claim_links: List[dict],
+        evidence_catalog: Dict[str, dict],
+    ) -> dict:
+        flagged: List[dict] = []
+        total = len(claim_links)
+        if not (story or "").strip() or total == 0:
+            return {
+                "status": "pass",
+                "claims_total": total,
+                "claims_flagged": 0,
+                "citation_gap_ratio": 0.0,
+                "flagged_claims": [],
+            }
+        for claim in claim_links:
+            claim_text = claim.get("claim_text", "")
+            evidence_ids = claim.get("evidence_ids") or []
+            support_score = self._claim_support_score(claim_text, evidence_ids, evidence_catalog)
+            reasons: List[str] = []
+            if not evidence_ids:
+                reasons.append("No citations linked to claim")
+            if evidence_ids and support_score < self.STORY_SUPPORT_THRESHOLD:
+                reasons.append(f"Low lexical overlap ({support_score:.2f})")
+            has_numbers = any(ch.isdigit() for ch in claim_text)
+            evidence_texts = [
+                (evidence_catalog[e_id].get("text") or "")
+                for e_id in evidence_ids
+                if e_id in evidence_catalog
+            ]
+            if has_numbers and evidence_ids and evidence_texts and not any(
+                any(ch.isdigit() for ch in text) for text in evidence_texts
+            ):
+                reasons.append("Numeric claim lacks cited numbers")
+            if reasons:
+                flagged.append(
+                    {
+                        "claim_id": claim.get("claim_id"),
+                        "claim_text": claim_text,
+                        "reason": "; ".join(reasons),
+                        "support_score": round(support_score, 3),
+                        "evidence_ids": evidence_ids,
+                    }
+                )
+        flagged_count = len(flagged)
+        ratio = flagged_count / max(1, total)
+        if flagged_count == 0:
+            status = "pass"
+        elif ratio >= 0.4 or flagged_count >= 2:
+            status = "investigate"
+        else:
+            status = "needs_attention"
+        return {
+            "status": status,
+            "claims_total": total,
+            "claims_flagged": flagged_count,
+            "citation_gap_ratio": round(ratio, 3),
+            "flagged_claims": flagged,
+        }
+
+    def _claim_support_score(
+        self,
+        claim_text: str,
+        evidence_ids: List[str],
+        evidence_catalog: Dict[str, dict],
+    ) -> float:
+        claim_tokens = self._tokenize_text(claim_text)
+        if not claim_tokens:
+            return 0.0
+        evidence_tokens: set[str] = set()
+        for evidence_id in evidence_ids:
+            record = evidence_catalog.get(evidence_id) or {}
+            evidence_tokens.update(self._tokenize_text(record.get("text", "")))
+        if not evidence_tokens:
+            return 0.0
+        overlap = len(claim_tokens & evidence_tokens)
+        return overlap / max(1, len(claim_tokens))
+
+    def _tokenize_text(self, text: str) -> set[str]:
+        tokens = re.findall(r"[a-z0-9]+", (text or "").lower())
+        return {
+            token
+            for token in tokens
+            if len(token) >= 4 and token not in self.STORY_STOPWORDS
+        }
+
+    def _max_quality_status(self, left: str, right: str) -> str:
+        order = {"pass": 0, "needs_attention": 1, "investigate": 2}
+        left_rank = order.get(left, 0)
+        right_rank = order.get(right, 0)
+        return left if left_rank >= right_rank else right
