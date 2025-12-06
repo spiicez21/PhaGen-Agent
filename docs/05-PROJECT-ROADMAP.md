@@ -133,9 +133,9 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - [x] External `/api/analyze-molecule` endpoint for partners (implemented as `POST /api/jobs` with public access).
 - [x] Private model hosting with strict access controls for local LLMs (Ollama with configurable models via .env).
 - [x] Network egress controls enforcing default-deny (tested via `test_egress_security.py` with CI enforcement).
-- [ ] Hardware-backed key storage (HSM) for high-assurance customers.
-- [ ] Signed container images and supply-chain verification (in-toto, Cosign, Notary v2).
-- [ ] Air-gapped deployment mode with offline model bundles and pre-indexed datasets.
+- [x] Hardware-backed key storage (HSM) for high-assurance customers (`backend/app/security/hsm_manager.py` with HSMManager class, SoftHSM/AWS CloudHSM/Azure Key Vault providers, PKCS#11 interface, AES-GCM encryption, key rotation support).
+- [x] Signed container images and supply-chain verification (`infra/scripts/sign-containers.sh` for local signing, `.github/workflows/sign-and-push.yml` for CI/CD, `infra/scripts/verify_images.py` for deployment verification, Cosign for signatures, Syft for SBOM generation, Trivy for vulnerability scanning, keyless signing via GitHub OIDC).
+- [x] Air-gapped deployment mode with offline model bundles and pre-indexed datasets (`infra/airgap/create_bundle.py` for bundle creation, `backend/app/offline_config.py` for offline mode detection, `infra/airgap/AIRGAP_DEPLOYMENT_GUIDE.md` with comprehensive deployment instructions, supports bundled models/indexes/dependencies/images, zero external network access).
 
 #### Advanced Analytics & ML
 - [x] Molecule–disease mapping model for proactive repurposing suggestions (`backend/app/ml/disease_mapper.py` with MoleculeDiseaseMapper class, category-based prediction from clinical/literature evidence, integrated into job results via `repurposing_suggestions` field).
