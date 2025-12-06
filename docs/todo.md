@@ -114,11 +114,11 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 ### Stretch / future
 #### Section 12 — Advanced Features
 - [x] Active learning loop: users can upvote/downvote evidence to fine-tune reranker weights and improve retrieval relevance over time (feedback API implemented).
-- [ ] Integrate paid market APIs (IQVIA, Evaluate Pharma) for real market sizing data instead of synthetic TAM estimates.
-- [ ] Patent claim-level semantic matching & visual claim maps to identify specific blocking claims and freedom-to-operate risks.
-- [ ] Continuous crawler with change detection & data freshness scoring to auto-refresh evidence when source documents update.
-- [ ] Multi-region regulatory rule engine (US/EU/India) for localized compliance checks and approval pathway analysis.
-- [ ] Team collaboration features (annotations, shared notes, task assignments, @mentions) for multi-user workflows.
+- [x] Integrate paid market APIs (IQVIA, Evaluate Pharma) for real market sizing data instead of synthetic TAM estimates (`agents/workers/market_apis.py` with MarketDataAggregator, IQVIA/Evaluate Pharma adapters, automatic fallback to synthetic data, confidence scoring).
+- [x] Patent claim-level semantic matching & visual claim maps to identify specific blocking claims and freedom-to-operate risks (`agents/workers/patent_claims.py` with PatentClaimAnalyzer, claim extraction/parsing, blocking risk scoring, FTO analysis reports, ClaimMap dependency visualization).
+- [x] Continuous crawler with change detection & data freshness scoring to auto-refresh evidence when source documents update (`crawler/continuous_crawler.py` with ContinuousCrawler, SHA-256 content hashing, change detection, freshness scoring, incremental reindex triggers).
+- [x] Multi-region regulatory rule engine (US/EU/India) for localized compliance checks and approval pathway analysis (`agents/workers/regulatory_engine.py` with RegulatoryRuleEngine, pathway analysis for US/EU/India, accelerated pathway eligibility, timeline/probability estimates, multi-region comparison).
+- [ ] Team collaboration features (annotations, shared notes, task assignments, @mentions) for multi-user workflows (requires user auth system, comment database schema, real-time notifications, UI components).
 
 #### Infrastructure & Scaling
 - [x] Horizontal autoscaling for agent workers (Kubernetes HPA configured for API 2-10 replicas, Celery workers 1-8 replicas).
