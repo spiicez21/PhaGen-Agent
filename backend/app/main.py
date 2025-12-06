@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import logging
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -11,6 +12,19 @@ if str(ROOT) not in sys.path:
 
 # Load .env from repo root, overriding system environment variables
 load_dotenv(ROOT / ".env", override=True)
+
+# Configure logging for agents
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+
+# Set agent loggers to INFO level
+logging.getLogger('agents.master').setLevel(logging.INFO)
+logging.getLogger('agents.llm').setLevel(logging.INFO)
+logging.getLogger('agents.workers').setLevel(logging.INFO)
+logging.getLogger('agents.retrieval').setLevel(logging.INFO)
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware

@@ -128,11 +128,16 @@ class MasterAgent:
         synonyms: list[str] | None = None,
         smiles: str | None = None,
     ) -> MasterRun:
+        self._logger.info(f"🚀 Starting agent analysis for molecule: {molecule}")
+        self._logger.info(f"   Provided synonyms: {synonyms or 'None'}")
+        self._logger.info(f"   SMILES: {smiles or 'Not provided'}")
+        
         expanded_synonyms = self.synonyms.expand(
             molecule,
             provided_synonyms=synonyms,
             smiles=smiles,
         )
+        self._logger.info(f"   Expanded synonyms: {expanded_synonyms}")
         request = WorkerRequest(
             molecule=molecule,
             synonyms=expanded_synonyms,
@@ -142,10 +147,15 @@ class MasterAgent:
         )
         worker_outputs: Dict[str, WorkerResult] = {}
         failures: list[WorkerFailure] = []
+        self._logger.info(f"\n📋 Executing {len(self.workers)} workers: {list(self.workers.keys())}")
+        
         for name, worker in self.workers.items():
             try:
+                self._logger.info(f"   ⚙️  Running {name} worker...")
                 worker_outputs[name] = self._run_with_retries(name, worker, request)
+                self._logger.info(f"   ✅ {name} worker completed (confidence: {worker_outputs[name].confidence:.2f})")
             except Exception as exc:  # pragma: no cover - placeholder
+                self._logger.error(f"   ❌ {name} worker failed: {str(exc)}")
                 failures.append(WorkerFailure(worker_name=name, reason=str(exc)))
         if failures:
             return MasterRun(
@@ -155,8 +165,13 @@ class MasterAgent:
         market_score = int(
             float(worker_outputs["market"].metadata.get("market_score", "70"))
         )
+        self._logger.info(f"\n🎯 Market score: {market_score}")
+        
+        self._logger.info("\n🔄 Generating fallback story and recommendation...")
         fallback_story = self._fallback_story(molecule, worker_outputs)
         fallback_recommendation = self._recommend(market_score, worker_outputs)
+        
+        self._logger.info("\n🧠 Synthesizing final innovation story and recommendation...")
         innovation_story, recommendation = self._synthesize_story_and_recommendation(
             molecule,
             worker_outputs,
@@ -164,6 +179,11 @@ class MasterAgent:
             fallback_story,
             fallback_recommendation,
         )
+        self._logger.info(f"   Final recommendation: {recommendation}")
+        self._logger.info(f"\n✅ Agent analysis completed successfully for {molecule}")
+        self._logger.info(f"   Story length: {len(innovation_story)} chars")
+        self._logger.info(f"   Workers completed: {len(worker_outputs)}/{len(self.workers)}\n")
+        
         return MasterRun(
             success=True,
             output=MasterResult(

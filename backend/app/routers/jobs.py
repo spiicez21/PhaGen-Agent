@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Response
 
 from ..chemistry import build_structure_payload
@@ -9,6 +10,8 @@ from ..jobs import InMemoryJobStore, PostgresJobStore
 from ..reporting import generate_report_pdf
 from ..storage import store_report_pdf
 from ..schemas import JobCreateRequest, JobResponse, JobStatus
+
+logger = logging.getLogger(__name__)
 
 try:
     from ..ml import generate_repurposing_suggestions
@@ -52,6 +55,10 @@ def _ensure_structure_metadata(job_id: str, payload: dict) -> None:
 
 def _run_job(job_id: str, payload: JobCreateRequest) -> None:
     try:
+        logger.info(f"\n{'='*80}")
+        logger.info(f"Starting job {job_id} for molecule: {payload.molecule}")
+        logger.info(f"{'='*80}\n")
+        
         job_store.update_job(job_id, status=JobStatus.running)
         result = master_agent.run(
             molecule=payload.molecule,
@@ -59,6 +66,7 @@ def _run_job(job_id: str, payload: JobCreateRequest) -> None:
             smiles=payload.smiles,
         )
         if not result.success:
+            logger.error(f"Job {job_id} failed with {len(result.failures)} worker failures")
             job_store.update_job(
                 job_id,
                 status=JobStatus.failed,
@@ -89,7 +97,18 @@ def _run_job(job_id: str, payload: JobCreateRequest) -> None:
             report_version=version,
         )
         job_store.persist_artifacts(job_id, serialized, version)
+        
+        logger.info(f"\n{'='*80}")
+        logger.info(f"\u2705 Job {job_id} completed successfully")
+        logger.info(f"   Recommendation: {result.output.recommendation}")
+        logger.info(f"   Report version: {version}")
+        logger.info(f"{'='*80}\n")
+        
     except Exception as exc:  # pragma: no cover - logging stub
+        logger.error(f"\n{'='*80}")
+        logger.error(f"\u274c Job {job_id} failed with error: {str(exc)}")
+        logger.error(f"{'='*80}\n", exc_info=True)
+        
         job_store.update_job(
             job_id,
             status=JobStatus.failed,
