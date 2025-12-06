@@ -358,8 +358,26 @@ class MasterAgent:
             )
             parsed = self._parse_master_response(raw)
         except (LLMClientError, ValueError) as exc:  # pragma: no cover - runtime
-            self._logger.warning("Master synthesis fallback: %s", exc)
-            return fallback_story, fallback_recommendation
+            self._logger.warning("Master synthesis attempt 1 failed: %s, trying simpler prompt", exc)
+            # Retry with a much simpler prompt for small models
+            try:
+                simple_prompt = (
+                    f"Molecule: {molecule}\n"
+                    f"Market score: {market_score}\n"
+                    f"Clinical summary: {worker_outputs.get('clinical', WorkerResult()).summary[:200]}\n"
+                    f"Patent summary: {worker_outputs.get('patent', WorkerResult()).summary[:200]}\n\n"
+                    "Return only JSON: {\"innovation_story\": \"brief story\", \"recommendation\": \"Go or Investigate or No-Go\", \"rationale\": \"reason\"}"
+                )
+                raw = self.llm.generate(
+                    prompt=simple_prompt,
+                    system_prompt="You are a JSON-only responder.",
+                    temperature=0.1,
+                    max_tokens=300,
+                )
+                parsed = self._parse_master_response(raw)
+            except (LLMClientError, ValueError) as retry_exc:
+                self._logger.warning("Master synthesis fallback after retry: %s", retry_exc)
+                return fallback_story, fallback_recommendation
 
         story = parsed.get("innovation_story") or fallback_story
         recommendation = self._resolve_recommendation(
@@ -395,12 +413,31 @@ class MasterAgent:
 
     def _parse_master_response(self, raw: str) -> dict:
         snippet = raw.strip()
+        # Try direct parse first
+        try:
+            return json.loads(snippet)
+        except json.JSONDecodeError:
+            pass
+        # Try extracting JSON from markdown code blocks
+        if "```json" in snippet:
+            start = snippet.find("```json") + 7
+            end = snippet.find("```", start)
+            if end > start:
+                snippet = snippet[start:end].strip()
+                try:
+                    return json.loads(snippet)
+                except json.JSONDecodeError:
+                    pass
+        # Try finding first { to last }
         start = snippet.find("{")
         end = snippet.rfind("}")
-        if start == -1 or end == -1 or end <= start:
-            raise ValueError("Master synthesis did not return JSON")
-        json_blob = snippet[start : end + 1]
-        return json.loads(json_blob)
+        if start != -1 and end != -1 and end > start:
+            json_blob = snippet[start : end + 1]
+            try:
+                return json.loads(json_blob)
+            except json.JSONDecodeError as e:
+                self._logger.debug(f"JSON parse failed: {e}, raw response: {raw[:200]}")
+        raise ValueError("Master synthesis did not return valid JSON")
 
     def _resolve_recommendation(
         self,
