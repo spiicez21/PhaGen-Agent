@@ -83,9 +83,25 @@ def _run_job(job_id: str, payload: JobCreateRequest) -> None:
 
 
 @router.post("", response_model=JobResponse)
-def create_job(request: JobCreateRequest, background_tasks: BackgroundTasks) -> JobResponse:
+def create_job(
+    request: JobCreateRequest, 
+    background_tasks: BackgroundTasks,
+    use_celery: bool = Query(default=False)
+) -> JobResponse:
     job = job_store.create_job(request)
-    background_tasks.add_task(_run_job, job.job_id, request)
+    
+    if use_celery:
+        # Use Celery for distributed execution
+        try:
+            from ..celery_tasks import run_analysis_job
+            run_analysis_job.delay(job.job_id, request.model_dump())
+        except (ImportError, Exception):
+            # Fall back to background task if Celery not available
+            background_tasks.add_task(_run_job, job.job_id, request)
+    else:
+        # Use FastAPI BackgroundTasks for single-instance deployment
+        background_tasks.add_task(_run_job, job.job_id, request)
+    
     return job
 
 

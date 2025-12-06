@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: phagen-config
+  namespace: phagen
+data:
+  # Application settings
+  API_PREFIX: "/api"
+  RAG_TOP_K: "5"
+  JOB_TTL_MINUTES: "60"
+  
+  # Storage settings
+  STORAGE_PROVIDER: "s3"
+  S3_REGION: "us-east-1"
+  S3_USE_SSL: "true"
+  S3_RAW_DOCUMENTS_BUCKET: "phagen-raw-documents"
+  S3_REPORTS_BUCKET: "phagen-report-artifacts"
+  
+  # Cache settings
+  REDIS_URL: "redis://phagen-redis:6379/0"
+  CACHE_ENABLED: "true"
+  
+  # Celery settings
+  CELERY_BROKER_URL: "redis://phagen-redis:6379/1"
+  CELERY_RESULT_BACKEND: "redis://phagen-redis:6379/1"
+  
+  # LLM settings
+  LLM_PROVIDER: "ollama"
+  LLM_BASE_URL: "http://ollama:11434"
+  LLM_MODEL: "smollm:360m"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: phagen-secrets
+  namespace: phagen
+type: Opaque
+stringData:
+  # Database connection
+  DATABASE_URL: "postgresql://user:password@postgres:5432/phagen"
+  
+  # S3 credentials
+  S3_ACCESS_KEY: "your-access-key"
+  S3_SECRET_KEY: "your-secret-key"
+  S3_ENDPOINT_URL: "https://s3.amazonaws.com"
+  
+  # Optional: OpenAI API key for alternative LLM
+  OPENAI_API_KEY: ""

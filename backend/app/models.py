@@ -35,6 +35,27 @@ class Molecule(Base):
     )
 
 
+class EvidenceFeedback(Base):
+    __tablename__ = "evidence_feedback"
+    
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid_str)
+    job_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("jobs.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    evidence_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    evidence_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    feedback_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    feedback_score: Mapped[float] = mapped_column(Float, nullable=False)
+    user_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    job: Mapped["Job"] = relationship(back_populates="feedback")
+
+
 class Job(Base):
     __tablename__ = "jobs"
 
@@ -63,6 +84,10 @@ class Job(Base):
         cascade="all, delete-orphan",
     )
     reports: Mapped[List["Report"]] = relationship(
+        back_populates="job",
+        cascade="all, delete-orphan",
+    )
+    feedback: Mapped[List["EvidenceFeedback"]] = relationship(
         back_populates="job",
         cascade="all, delete-orphan",
     )

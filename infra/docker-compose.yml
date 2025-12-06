@@ -65,6 +65,38 @@ services:
     networks:
       - phagen
 
+  pgbouncer:
+    image: edoburu/pgbouncer
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgres://phagen:phagen@postgres:5432/phagen
+      - POOL_MODE=transaction
+      - MAX_CLIENT_CONN=1000
+      - DEFAULT_POOL_SIZE=25
+    ports:
+      - "6432:5432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - phagen
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - phagen
+
   minio:
     image: quay.io/minio/minio
     command: server /data --console-address ":9001"
@@ -112,3 +144,4 @@ volumes:
   postgres-data:
   minio-data:
   ollama-models:
+  redis-data:

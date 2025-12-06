@@ -18,10 +18,22 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import get_settings
 from .database import init_db
 from .routers import jobs as jobs_router
+from .routers import health as health_router
+from .routers import feedback as feedback_router
+from .cache import get_cache
 
 settings = get_settings()
 app = FastAPI(title="PhaGen Agentic API")
 init_db()
+
+# Initialize cache on startup
+@app.on_event("startup")
+async def startup_event():
+    cache = get_cache()
+    if cache.enabled:
+        print(f"✓ Redis cache enabled: {settings.redis_url}")
+    else:
+        print("✓ Cache disabled, running in direct mode")
 
 allowed_origins = {
     "http://localhost:3000",
@@ -37,8 +49,5 @@ app.add_middleware(
 )
 
 app.include_router(jobs_router.router)
-
-
-@app.get("/health")
-def health() -> dict:
-    return {"status": "ok"}
+app.include_router(health_router.router)
+app.include_router(feedback_router.router)

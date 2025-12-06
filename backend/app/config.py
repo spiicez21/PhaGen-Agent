@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     s3_use_ssl: bool = Field(default=False)
     s3_raw_documents_bucket: str = Field(default="phagen-raw-documents")
     s3_reports_bucket: str = Field(default="phagen-report-artifacts")
+    redis_url: str = Field(default="redis://localhost:6379/0")
+    cache_enabled: bool = Field(default=True)
+    celery_broker_url: str = Field(default="redis://localhost:6379/1")
+    celery_result_backend: str = Field(default="redis://localhost:6379/1")
 
 
 @lru_cache
