@@ -1,7 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { WorkerKind, WorkerResultPayload } from "../types";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { FileText, ExternalLink, AlertCircle, CheckCircle2, HelpCircle } from "lucide-react";
 
 const PANEL_META: Record<WorkerKind, { label: string; description: string; empty: string }> = {
   clinical: {
@@ -47,14 +53,26 @@ const formatMetadataValue = (value: string): string => {
   return value;
 };
 
-const confidenceLabel = (band?: WorkerResultPayload["confidence_band"], score?: number) => {
-  if (band === "high") return "High confidence";
-  if (band === "medium") return "Moderate confidence";
-  if (band === "low") return "Signal needs validation";
-  if (score === undefined) return "";
-  if (score >= 0.8) return "High confidence";
-  if (score >= 0.6) return "Moderate confidence";
-  return "Signal needs validation";
+const getConfidenceBadge = (band?: WorkerResultPayload["confidence_band"], score?: number) => {
+  let label = "Signal needs validation";
+  let variant: "default" | "secondary" | "destructive" | "outline" = "outline";
+  let icon = <HelpCircle className="w-3 h-3 mr-1" />;
+
+  if (band === "high" || (score !== undefined && score >= 0.8)) {
+    label = "High confidence";
+    variant = "default"; // Using default (primary color) for high confidence
+    icon = <CheckCircle2 className="w-3 h-3 mr-1" />;
+  } else if (band === "medium" || (score !== undefined && score >= 0.6)) {
+    label = "Moderate confidence";
+    variant = "secondary";
+    icon = <AlertCircle className="w-3 h-3 mr-1" />;
+  }
+
+  return (
+    <Badge variant={variant} className="flex items-center w-fit">
+      {icon} {label}
+    </Badge>
+  );
 };
 
 export const EvidenceTabs = ({ workers = {}, reportJobId, reportVersion }: EvidenceTabsProps) => {
@@ -63,105 +81,138 @@ export const EvidenceTabs = ({ workers = {}, reportJobId, reportVersion }: Evide
     () => workerKeys.filter((key) => Boolean(workers[key])),
     [workerKeys, workers]
   );
-  const [active, setActive] = useState<WorkerKind>(available[0] ?? "clinical");
-  const resolvedActive: WorkerKind = available.includes(active)
-    ? active
-    : (available[0] ?? "clinical");
-
-  const meta = PANEL_META[resolvedActive];
-  const worker = workers[resolvedActive];
-  const reportHref = reportJobId ? `/api/jobs/${reportJobId}/report.pdf` : undefined;
-  const versionLabel = typeof reportVersion === "number" ? `Report V${reportVersion}` : undefined;
+  
+  const defaultTab = available[0] ?? "clinical";
 
   return (
-    <section className="panel" aria-labelledby="evidence-heading">
-      <header className="panel__header">
-        <div>
-          <p className="eyebrow">Evidence dashboard</p>
-          <h2 id="evidence-heading" className="text-2xl font-semibold">{meta.label}</h2>
-          <p className="panel__description">{meta.description}</p>
-        </div>
-        <div className="tablist" role="tablist">
-          {workerKeys.map((key) => (
-            <button
-              key={key}
-              type="button"
-              className={`tab ${resolvedActive === key ? "tab--active" : ""}`}
-              aria-pressed={resolvedActive === key}
-              onClick={() => setActive(key)}
-            >
-              {PANEL_META[key].label}
-            </button>
-          ))}
-        </div>
-      </header>
+    <div className="space-y-6">
+      <div className="space-y-1">
+        <h2 className="text-2xl font-semibold tracking-tight">Evidence Dashboard</h2>
+        <p className="text-muted-foreground">
+          Detailed breakdown of evidence collected by each specialized worker.
+        </p>
+      </div>
 
-      {!worker ? (
-        <div className="empty-state">
-          <p>{meta.empty}</p>
-          <p className="empty-state__hint">Tip: ingest fresh data then rerun the agent orchestration.</p>
-        </div>
-      ) : (
-        <div className="evidence-layout">
-          <div className="summary-card">
-            <p className="eyebrow">Worker summary</p>
-            <p className="summary-card__text">{worker.summary}</p>
-            <p className="summary-card__confidence">
-              {confidenceLabel(worker.confidence_band, worker.confidence)}
-            </p>
-            {(reportHref || versionLabel) && (
-              <div className="flex flex-wrap gap-2 mt-3 items-center">
-                {reportHref && (
-                  <a
-                    className="btn-secondary"
-                    href={reportHref}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Download run PDF
-                  </a>
-                )}
-                {versionLabel && <span className="badge">{versionLabel}</span>}
-              </div>
-            )}
-            {Object.keys(worker.metadata ?? {}).length > 0 && (
-              <dl className="metadata-grid">
-                {Object.entries(worker.metadata).map(([key, value]) => (
-                  <div key={key}>
-                    <dt>{key.replaceAll("_", " ")}</dt>
-                    <dd>{formatMetadataValue(value)}</dd>
-                  </div>
-                ))}
-              </dl>
-            )}
-          </div>
-          <div className="evidence-stack">
-            {worker.evidence?.length ? (
-              worker.evidence.map((item, idx) => (
-                <article key={`${resolvedActive}-${idx}`} className="evidence-card">
-                  <header>
-                    <span className="badge">{item.type}</span>
-                    <span className="confidence-pill">{Math.round(item.confidence * 100)}% confidence</span>
-                  </header>
-                  <p>{item.text}</p>
-                  {item.url && (
-                    <a href={item.url} target="_blank" rel="noreferrer" className="evidence-link">
-                      View source ↗
-                    </a>
+      <Tabs defaultValue={defaultTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          {workerKeys.map((key) => (
+            <TabsTrigger key={key} value={key} disabled={!workers[key]}>
+              {PANEL_META[key].label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        
+        {workerKeys.map((key) => {
+          const worker = workers[key];
+          const meta = PANEL_META[key];
+          
+          if (!worker) return null;
+
+          return (
+            <TabsContent key={key} value={key} className="space-y-6 mt-6">
+              <div className="grid gap-6 md:grid-cols-3">
+                {/* Summary Column */}
+                <div className="md:col-span-1 space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Summary</CardTitle>
+                      <CardDescription>{meta.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="text-sm text-muted-foreground">
+                        {worker.summary}
+                      </div>
+                      
+                      {getConfidenceBadge(worker.confidence_band, worker.confidence)}
+
+                      {reportJobId && (
+                        <Button variant="outline" className="w-full" asChild>
+                          <a href={`/api/jobs/${reportJobId}/report.pdf`} target="_blank" rel="noreferrer">
+                            <FileText className="mr-2 h-4 w-4" />
+                            Download PDF {reportVersion ? `(V${reportVersion})` : ''}
+                          </a>
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {Object.keys(worker.metadata ?? {}).length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-sm">Metadata</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <dl className="space-y-2 text-sm">
+                          {Object.entries(worker.metadata).map(([k, v]) => (
+                            <div key={k} className="flex justify-between border-b pb-1 last:border-0 last:pb-0">
+                              <dt className="font-medium text-muted-foreground capitalize">{k.replaceAll("_", " ")}</dt>
+                              <dd className="text-right truncate max-w-[150px]" title={v}>{formatMetadataValue(v)}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </CardContent>
+                    </Card>
                   )}
-                  {item.evidence_id && (
-                    <p className="subtle-text">Evidence ID · {item.evidence_id}</p>
-                  )}
-                </article>
-              ))
-            ) : (
-              <div className="empty-state">
-                <p>No evidence bullets yet for this worker.</p>
+                </div>
+
+                {/* Evidence List Column */}
+                <div className="md:col-span-2">
+                  <Card className="h-full flex flex-col">
+                    <CardHeader>
+                      <CardTitle>Evidence Items</CardTitle>
+                      <CardDescription>
+                        {worker.evidence?.length ?? 0} items retrieved
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-1 p-0">
+                      {worker.evidence?.length ? (
+                        <div className="divide-y">
+                          {worker.evidence.map((item, idx) => (
+                            <div key={idx} className="p-6 hover:bg-muted/50 transition-colors">
+                              <div className="flex items-center justify-between mb-2">
+                                <Badge variant="secondary" className="capitalize">
+                                  {item.type}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground font-mono">
+                                  {Math.round(item.confidence * 100)}% conf
+                                </span>
+                              </div>
+                              <p className="text-sm leading-relaxed mb-3">
+                                {item.text}
+                              </p>
+                              <div className="flex items-center justify-between">
+                                {item.evidence_id && (
+                                  <span className="text-xs text-muted-foreground font-mono">
+                                    ID: {item.evidence_id}
+                                  </span>
+                                )}
+                                {item.url && (
+                                  <a 
+                                    href={item.url} 
+                                    target="_blank" 
+                                    rel="noreferrer" 
+                                    className="text-xs flex items-center text-primary hover:underline"
+                                  >
+                                    Source <ExternalLink className="ml-1 h-3 w-3" />
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-8 text-center text-muted-foreground">
+                          <p>{meta.empty}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
-            )}
-          </div>
-        </div>
-      )}
-    </section>
+            </TabsContent>
+          );
+        })}
+      </Tabs>
+    </div>
   );
 };
