@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 import { DEMO_JOB, REPORT_SECTIONS, SAMPLE_PAYLOAD } from "../sample-data";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { FileText, Download, Code, CheckCircle2, AlertCircle, Loader2, FileJson } from "lucide-react";
 
 const downloadBlob = (blob: Blob, filename: string) => {
   const url = window.URL.createObjectURL(blob);
@@ -80,84 +86,115 @@ export default function ReportsPage() {
   const validation = SAMPLE_PAYLOAD.validation;
 
   return (
-    <div className="section-stack">
-      <section className="section-card space-y-4">
-        <p className="eyebrow">Report workspace</p>
-        <h1 className="text-2xl font-semibold">Full deliverable layout</h1>
-        <p className="subtle-text">
-          Review, edit, and export the structured report. PDF + JSON export hooks connect directly to the backend jobs API.
-        </p>
-        <div className="grid gap-3 md:grid-cols-[2fr_auto_auto] md:items-end">
-          <label className="space-y-2">
-            <span className="eyebrow">Job ID</span>
-            <input
-              className="input"
-              placeholder="JOB-XXXX"
-              value={jobId}
-              onChange={(event) => setJobId(event.target.value)}
-            />
-          </label>
-          <button
-            className="btn-primary"
-            type="button"
-            onClick={handlePdfDownload}
-            disabled={isDownloading}
-          >
-            {isDownloading ? "Generating..." : "Download PDF"}
-          </button>
-          <button
-            className="btn-secondary"
-            type="button"
-            onClick={handleJsonExport}
-            disabled={isExportingJson}
-          >
-            {isExportingJson ? "Exporting..." : "Export JSON"}
-          </button>
-        </div>
-        {status && <p className="text-sm text-emerald-400">{status}</p>}
-        {error && <p className="text-sm text-rose-400">{error}</p>}
-      </section>
-
-      <section className="section-card space-y-4">
-        <p className="eyebrow">Table of contents</p>
-        <ol className="space-y-2 list-decimal pl-6">
-          {REPORT_SECTIONS.map((section) => (
-            <li key={section.title}>{section.title}</li>
-          ))}
-        </ol>
-      </section>
-
-      {validation && (
-        <section className="section-card space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="eyebrow">Validation snapshot</p>
-              <h2 className="text-xl font-semibold">Claims ↔ Evidence</h2>
+    <div className="space-y-8 py-8">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+            <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">Workspace</span>
+            <span>Deliverables</span>
+          </div>
+          <CardTitle className="text-2xl">Report Workspace</CardTitle>
+          <CardDescription>
+            Review, edit, and export the structured report. PDF + JSON export hooks connect directly to the backend jobs API.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex flex-col md:flex-row gap-4 items-end">
+            <div className="grid w-full max-w-sm items-center gap-1.5">
+              <Label htmlFor="jobId">Job ID</Label>
+              <Input
+                id="jobId"
+                placeholder="JOB-XXXX"
+                value={jobId}
+                onChange={(event) => setJobId(event.target.value)}
+              />
             </div>
-            <span className={`validation-chip validation-chip--${validation.status}`}>
-              {validation.claims_linked}/{validation.claims_total} linked
-            </span>
+            <div className="flex gap-2">
+              <Button onClick={handlePdfDownload} disabled={isDownloading}>
+                {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
+                Download PDF
+              </Button>
+              <Button variant="outline" onClick={handleJsonExport} disabled={isExportingJson}>
+                {isExportingJson ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileJson className="mr-2 h-4 w-4" />}
+                Export JSON
+              </Button>
+            </div>
           </div>
-          <div className="validation-claims">
-            {validation.claim_links.map((claim) => (
-              <article key={claim.claim_id} className="validation-claim space-y-2">
-                <p className="eyebrow">{claim.worker}</p>
-                <p>{claim.claim_text}</p>
-                <p className="subtle-text">
-                  Evidence IDs · {claim.evidence_ids.length ? claim.evidence_ids.join(", ") : "None"}
-                </p>
-              </article>
-            ))}
-          </div>
-        </section>
-      )}
 
-      {REPORT_SECTIONS.map((section) => (
-        <section key={section.title} className="section-card space-y-2">
-          <h2 className="text-xl font-semibold">{section.title}</h2>
-          <p>{section.body}</p>
-        </section>
-      ))}
+          {(status || error) && (
+            <div className={`flex items-center gap-2 text-sm p-3 rounded-md ${status ? 'bg-emerald-50 text-emerald-600' : 'bg-destructive/10 text-destructive'}`}>
+              {status ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+              {status || error}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-8 md:grid-cols-[300px_1fr]">
+        <div className="space-y-6">
+          <Card className="sticky top-6">
+            <CardHeader>
+              <CardTitle className="text-lg">Table of Contents</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <nav className="flex flex-col space-y-1">
+                {REPORT_SECTIONS.map((section, i) => (
+                  <a 
+                    key={section.title} 
+                    href={`#section-${i}`}
+                    className="text-sm text-muted-foreground hover:text-primary hover:underline py-1"
+                  >
+                    {i + 1}. {section.title}
+                  </a>
+                ))}
+              </nav>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-8">
+          {validation && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">Validation Snapshot</CardTitle>
+                  <Badge variant={validation.status === "pass" ? "default" : "secondary"}>
+                    {validation.claims_linked}/{validation.claims_total} Linked
+                  </Badge>
+                </div>
+                <CardDescription>Claims ↔ Evidence Traceability</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {validation.claim_links.map((claim) => (
+                  <div key={claim.claim_id} className="p-4 rounded-lg bg-muted/50 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline" className="capitalize">{claim.worker}</Badge>
+                      <span className="text-xs text-muted-foreground font-mono">ID: {claim.claim_id}</span>
+                    </div>
+                    <p className="text-sm">{claim.claim_text}</p>
+                    <div className="text-xs text-muted-foreground">
+                      Evidence IDs: {claim.evidence_ids.length ? claim.evidence_ids.join(", ") : "None"}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {REPORT_SECTIONS.map((section, i) => (
+            <Card key={section.title} id={`section-${i}`}>
+              <CardHeader>
+                <CardTitle>{section.title}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="prose prose-sm max-w-none text-muted-foreground">
+                  <p>{section.body}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

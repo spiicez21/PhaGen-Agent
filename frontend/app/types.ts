@@ -124,6 +124,7 @@ export interface CompetitorRow {
 }
 
 export interface HistoryRun {
+  id: string;
   molecule: string;
   date: string;
   recommendation: string;

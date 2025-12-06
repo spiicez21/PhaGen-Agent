@@ -4,6 +4,11 @@ import { FormEvent, useState } from "react";
 import { ComparisonGrid } from "../components/ComparisonGrid";
 import { COMPARISON_SLOTS } from "../sample-data";
 import type { ComparisonSlot, JobApiResponse, MasterPayload, MasterPayloadWithMeta } from "../types";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Plus, ArrowRightLeft, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 
 const formatDate = (isoString: string): string =>
   new Date(isoString).toLocaleDateString("en-US", {
@@ -84,44 +89,75 @@ export default function ComparisonPage() {
   };
 
   return (
-    <div className="section-stack">
-      <section className="section-card space-y-4">
-        <p className="eyebrow">Phase 4 · Aggregation</p>
-        <h1 className="text-2xl font-semibold">Multi-molecule comparison</h1>
-        <p className="subtle-text">
-          Line up two or three molecules to compare confidence bands, innovation stories, and per-worker evidence in a single view. Use live job IDs or stick with the demo payloads to explore the layout.
-        </p>
-        <form className="comparison-form" onSubmit={handleCompare}>
-          <div className="comparison-form__fields">
-            {jobIds.map((id, index) => (
-              <label key={`job-field-${index}`} className="space-y-2">
-                <span className="eyebrow">Molecule slot {index + 1}</span>
-                <input
-                  className="input"
-                  placeholder="JOB-XXXX"
-                  value={id}
-                  onChange={(event) => handleJobIdChange(index, event.target.value)}
-                />
-              </label>
-            ))}
+    <div className="space-y-8 py-8">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+            <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">Phase 4</span>
+            <span>Aggregation</span>
           </div>
-          <div className="comparison-form__actions">
-            <button
-              className="btn-secondary"
-              type="button"
-              onClick={addJobField}
-              disabled={jobIds.length >= 3}
-            >
-              Add molecule slot
-            </button>
-            <button className="btn-primary" type="submit" disabled={isLoading}>
-              {isLoading ? "Comparing..." : "Compare jobs"}
-            </button>
-          </div>
-        </form>
-        {status && <p className="text-sm text-emerald-400">{status}</p>}
-        {error && <p className="text-sm text-rose-400">{error}</p>}
-      </section>
+          <CardTitle className="text-2xl">Multi-molecule Comparison</CardTitle>
+          <CardDescription>
+            Line up two or three molecules to compare confidence bands, innovation stories, and per-worker evidence in a single view. 
+            Use live job IDs or stick with the demo payloads to explore the layout.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleCompare} className="space-y-6">
+            <div className="grid gap-6 md:grid-cols-3">
+              {jobIds.map((id, index) => (
+                <div key={`job-field-${index}`} className="space-y-2">
+                  <Label htmlFor={`job-${index}`}>Molecule Slot {index + 1}</Label>
+                  <Input
+                    id={`job-${index}`}
+                    placeholder="JOB-XXXX"
+                    value={id}
+                    onChange={(event) => handleJobIdChange(index, event.target.value)}
+                  />
+                </div>
+              ))}
+              {jobIds.length < 3 && (
+                <div className="flex items-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full border-dashed"
+                    onClick={addJobField}
+                  >
+                    <Plus className="mr-2 h-4 w-4" /> Add Slot
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t">
+              <div className="flex items-center gap-2 text-sm">
+                {status && (
+                  <span className="flex items-center text-emerald-600">
+                    <CheckCircle2 className="mr-2 h-4 w-4" /> {status}
+                  </span>
+                )}
+                {error && (
+                  <span className="flex items-center text-destructive">
+                    <AlertCircle className="mr-2 h-4 w-4" /> {error}
+                  </span>
+                )}
+              </div>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Comparing...
+                  </>
+                ) : (
+                  <>
+                    <ArrowRightLeft className="mr-2 h-4 w-4" /> Compare Jobs
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
 
       <ComparisonGrid slots={slots} />
     </div>

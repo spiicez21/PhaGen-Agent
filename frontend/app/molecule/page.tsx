@@ -1,8 +1,14 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { JobTimeline } from "../components/JobTimeline";
-import { JOB_TIMELINE } from "../sample-data";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertCircle, Beaker, CheckCircle2, ChevronDown, ChevronUp, Loader2, Upload } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -12,23 +18,23 @@ type JobResponse = {
 };
 
 export default function MoleculePage() {
+  const router = useRouter();
   const [molecule, setMolecule] = useState("Pirfenidone");
   const [synonyms, setSynonyms] = useState("Esbriet\nPFD");
   const [smiles, setSmiles] = useState("");
   const [inchikey, setInchikey] = useState("KUFJONJOBWVSNK-UHFFFAOYSA-N");
   const [depth, setDepth] = useState<"quick" | "full">("full");
   const [note, setNote] = useState("Focus on PF-ILD cohort.");
-  const [jobId, setJobId] = useState<string | null>(null);
-  const [statusMessage, setStatusMessage] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const submit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       setLoading(true);
       setError(null);
-      setStatusMessage("Queueing job...");
+      
       const synonymList = synonyms
         .split(/[\n,]/)
         .map((value) => value.trim())
@@ -46,130 +52,153 @@ export default function MoleculePage() {
         }
 
         const payload: JobResponse = await response.json();
-        setJobId(payload.job_id);
-        setStatusMessage(`Job ${payload.job_id} queued with status ${payload.status}`);
+        router.push(`/job?id=${payload.job_id}`);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
-      } finally {
+        setError(err instanceof Error ? err.message : "An unknown error occurred");
         setLoading(false);
       }
     },
-    [depth, inchikey, molecule, note, synonyms, smiles]
+    [molecule, synonyms, smiles, inchikey, depth, note, router]
   );
 
   return (
-    <div className="section-stack">
-      <div className="grid-two">
-        <form className="section-card space-y-4" onSubmit={submit}>
-          <div>
-            <p className="eyebrow">Molecule search</p>
-            <h1 className="text-2xl font-semibold">Submit a new analysis</h1>
-            <p className="subtle-text">
-              Provide identifiers or upload structured context -- the platform will normalise inputs before orchestration.
-            </p>
-          </div>
-
-          <div>
-            <label className="eyebrow" htmlFor="molecule">
-              Molecule / asset
-            </label>
-            <input
-              id="molecule"
-              className="input"
-              value={molecule}
-              onChange={(event) => setMolecule(event.target.value)}
-              required
-            />
-          </div>
-
-          <div className="grid-two">
-            <div>
-              <label className="eyebrow" htmlFor="smiles">
-                SMILES
-              </label>
-              <input
-                id="smiles"
-                className="input"
-                value={smiles}
-                onChange={(event) => setSmiles(event.target.value)}
-                placeholder="O=C1NC(=O)N(C)C=C1C"
+    <div className="flex justify-center items-center min-h-[calc(100vh-100px)]">
+      <Card className="w-full max-w-2xl shadow-lg border-muted/40">
+        <CardHeader>
+          <CardTitle className="text-2xl flex items-center gap-2">
+            <Beaker className="h-6 w-6 text-primary" />
+            New Molecule Analysis
+          </CardTitle>
+          <CardDescription>
+            Configure the agents to scout for repurposing opportunities.
+          </CardDescription>
+        </CardHeader>
+        <form onSubmit={submit}>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="molecule">Molecule Name</Label>
+              <Input
+                id="molecule"
+                placeholder="e.g. Aspirin"
+                value={molecule}
+                onChange={(e) => setMolecule(e.target.value)}
+                required
+                className="text-lg"
               />
             </div>
-            <div>
-              <label className="eyebrow" htmlFor="inchikey">
-                InChI key
-              </label>
-              <input
-                id="inchikey"
-                className="input"
-                value={inchikey}
-                onChange={(event) => setInchikey(event.target.value)}
-                placeholder="XXXXXXXXXXXXXX"
+
+            <div className="space-y-2">
+              <Label htmlFor="synonyms">Synonyms (one per line)</Label>
+              <Textarea
+                id="synonyms"
+                placeholder="Enter synonyms..."
+                value={synonyms}
+                onChange={(e) => setSynonyms(e.target.value)}
+                className="min-h-20"
               />
             </div>
-          </div>
 
-          <div>
-            <label className="eyebrow" htmlFor="synonyms">
-              Synonyms / aliases
-            </label>
-            <textarea
-              id="synonyms"
-              className="textarea"
-              value={synonyms}
-              onChange={(event) => setSynonyms(event.target.value)}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label>Analysis Depth</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div
+                  className={cn(
+                    "cursor-pointer rounded-lg border-2 p-4 hover:bg-accent transition-all",
+                    depth === "quick" ? "border-primary bg-primary/5" : "border-muted"
+                  )}
+                  onClick={() => setDepth("quick")}
+                >
+                  <div className="font-semibold">Quick Scan</div>
+                  <div className="text-xs text-muted-foreground">Rapid feasibility check</div>
+                </div>
+                <div
+                  className={cn(
+                    "cursor-pointer rounded-lg border-2 p-4 hover:bg-accent transition-all",
+                    depth === "full" ? "border-primary bg-primary/5" : "border-muted"
+                  )}
+                  onClick={() => setDepth("full")}
+                >
+                  <div className="font-semibold">Full Evaluation</div>
+                  <div className="text-xs text-muted-foreground">Deep multi-agent report</div>
+                </div>
+              </div>
+            </div>
 
-          <div className="grid-two">
-            {(["quick", "full"] as const).map((value) => (
-              <label key={value} className={`chip ${depth === value ? "tab--active" : ""}`}>
-                <input
-                  type="radio"
-                  name="depth"
-                  className="mr-2"
-                  checked={depth === value}
-                  onChange={() => setDepth(value)}
-                />
-                {value === "quick" ? "Quick scan" : "Full evaluation"}
-              </label>
-            ))}
-          </div>
+            <div className="border-t pt-4">
+              <button
+                type="button"
+                className="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+              >
+                {showAdvanced ? <ChevronUp className="h-4 w-4 mr-1" /> : <ChevronDown className="h-4 w-4 mr-1" />}
+                Advanced Inputs
+              </button>
+              
+              {showAdvanced && (
+                <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="smiles">SMILES String</Label>
+                    <Input
+                      id="smiles"
+                      placeholder="e.g. CC(=O)OC1=CC=CC=C1C(=O)O"
+                      value={smiles}
+                      onChange={(e) => setSmiles(e.target.value)}
+                      className="font-mono text-xs"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="inchikey">InChI Key</Label>
+                    <Input
+                      id="inchikey"
+                      placeholder="e.g. BSYNRYMUTXBXSQ-UHFFFAOYSA-N"
+                      value={inchikey}
+                      onChange={(e) => setInchikey(e.target.value)}
+                      className="font-mono text-xs"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="note">Research Note</Label>
+                    <Textarea
+                      id="note"
+                      placeholder="Add context for the agents..."
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                    />
+                  </div>
+                  <div className="pt-2">
+                     <Button variant="outline" type="button" className="w-full border-dashed">
+                        <Upload className="mr-2 h-4 w-4" /> Upload Structure File (.json/.txt)
+                     </Button>
+                  </div>
+                </div>
+              )}
+            </div>
 
-          <div>
-            <label className="eyebrow" htmlFor="note">
-              Analyst note
-            </label>
-            <textarea
-              id="note"
-              className="textarea"
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-              placeholder="Call out safety watch-outs, preferred datasets, etc."
-            />
-          </div>
-
-          <div className="space-y-2">
-            <button className="btn-primary w-full justify-center" type="submit" disabled={loading}>
-              {loading ? "Submitting..." : "Run analysis"}
-            </button>
-            <label className="btn-secondary w-full cursor-pointer justify-center text-sm">
-              Upload context (.json/.txt)
-              <input type="file" className="hidden" accept=".json,.txt,.csv" />
-            </label>
-          </div>
-
-          {statusMessage && <p className="subtle-text">{statusMessage}</p>}
-          {jobId && <p className="eyebrow">Tracking job #{jobId}</p>}
-          {error && <p className="text-rose-300">{error}</p>}
+            {error && (
+              <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm flex items-center">
+                <AlertCircle className="h-4 w-4 mr-2" />
+                {error}
+              </div>
+            )}
+          </CardContent>
+          <CardFooter className="flex justify-end gap-4">
+            <Button variant="ghost" type="button" onClick={() => router.back()}>Cancel</Button>
+            <Button type="submit" disabled={loading} className="min-w-[140px]">
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  Run Analysis
+                  <CheckCircle2 className="ml-2 h-4 w-4" />
+                </>
+              )}
+            </Button>
+          </CardFooter>
         </form>
-
-        <div className="section-card space-y-4">
-          <p className="eyebrow">Agent pipeline</p>
-          <JobTimeline steps={JOB_TIMELINE} />
-          <div className="chart-placeholder">LLM orchestration, retrieval, and QA status feed will render here.</div>
-        </div>
-      </div>
+      </Card>
     </div>
   );
 }

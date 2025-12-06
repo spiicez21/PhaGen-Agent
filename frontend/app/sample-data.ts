@@ -596,10 +596,10 @@ export const MARKET_COMPETITORS: CompetitorRow[] = [
 ];
 
 export const HISTORY_RUNS: HistoryRun[] = [
-  { molecule: "Pirfenidone", date: "Dec 03, 2025", recommendation: "Investigate", status: "Completed" },
-  { molecule: "Metformin", date: "Dec 01, 2025", recommendation: "Go", status: "Completed" },
-  { molecule: "Nintedanib", date: "Nov 28, 2025", recommendation: "No-Go", status: "Completed" },
-  { molecule: "Lenabasum", date: "Nov 24, 2025", recommendation: "Investigate", status: "Running" }
+  { id: "run-1", molecule: "Pirfenidone", date: "Dec 03, 2025", recommendation: "Investigate", status: "Completed" },
+  { id: "run-2", molecule: "Metformin", date: "Dec 01, 2025", recommendation: "Go", status: "Completed" },
+  { id: "run-3", molecule: "Nintedanib", date: "Nov 28, 2025", recommendation: "No-Go", status: "Completed" },
+  { id: "run-4", molecule: "Lenabasum", date: "Nov 24, 2025", recommendation: "Investigate", status: "Running" }
 ];
 
 export const COMPARISON_SLOTS: ComparisonSlot[] = [

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Poppins } from "next/font/google";
 import "./globals.css";
+import { Header } from "@/components/Header";
+import { cn } from "@/lib/utils";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -20,29 +21,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${poppins.variable} antialiased page-shell`}>
-        <div className="app-shell">
-          <header className="global-header">
-            <div>
-              <p className="logo-mark">PhaGen</p>
-              <p className="logo-subhead">Agentic Intelligence</p>
-            </div>
-            <nav className="nav-links">
-              <Link href="/">Home</Link>
-              <Link href="/molecule">Molecule Search</Link>
-              <Link href="/job">Job Status</Link>
-              <Link href="/results">Results</Link>
-              <Link href="/comparison">Comparison</Link>
-              <Link href="/evidence/clinical">Evidence</Link>
-              <Link href="/reports">Reports</Link>
-              <Link href="/history">History</Link>
-              <Link href="/admin/crawler">Admin</Link>
-            </nav>
-          </header>
-          <main className="app-main">{children}</main>
+    <html lang="en" suppressHydrationWarning>
+      <body className={cn("min-h-screen bg-background font-sans antialiased", poppins.variable)}>
+        <div className="relative flex min-h-screen flex-col">
+          <Header />
+          <main className="flex-1 container max-w-screen-2xl mx-auto px-4 py-6">{children}</main>
         </div>
       </body>
     </html>
   );
 }
+

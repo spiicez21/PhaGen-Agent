@@ -1,137 +1,103 @@
 import Link from "next/link";
-import { HISTORY_RUNS, MARKET_METRICS, SAMPLE_PAYLOAD } from "./sample-data";
+import { HISTORY_RUNS } from "./sample-data";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ArrowRight, Beaker, FileText, History, Search } from "lucide-react";
 
 export default function LandingPage() {
-  const storyHighlights = Object.entries(SAMPLE_PAYLOAD.workers)
-    .slice(0, 3)
-    .map(([label, worker]) => ({
-      label,
-      summary: worker.summary
-    }));
-
   const recent = HISTORY_RUNS.slice(0, 3);
 
   return (
-    <div className="section-stack">
-      <section className="glass-card">
-        <p className="eyebrow">PhaGen Agentic</p>
-        <div className="grid-two items-center">
-          <div className="space-y-4">
-            <h1 className="text-3xl font-semibold">
-              Monotone intelligence stack for molecule repurposing decisions
-            </h1>
-            <p className="subtle-text">
-              A calm, compliance-ready cockpit that orchestrates clinical, literature, patent, and market workers into a single innovation story.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Link href="/molecule" className="btn-primary">
-                Start new analysis
-              </Link>
-              <Link href="/history" className="btn-secondary">
-                Review saved runs
-              </Link>
-            </div>
-          </div>
-          <div className="section-card space-y-3">
-            <p className="eyebrow">Latest master summary</p>
-            <p className="text-lg text-white">{SAMPLE_PAYLOAD.innovation_story}</p>
-            <ul className="space-y-2 text-sm text-white/80">
-              {storyHighlights.map((item) => (
-                <li key={item.label}>
-                  <span className="font-semibold capitalize">{item.label} · </span>
-                  {item.summary}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      <section>
-        <h2 className="section-title">System signals</h2>
-        <div className="metrics-grid">
-          {MARKET_METRICS.map((metric) => (
-            <div key={metric.label} className="metric-card space-y-2">
-              <p className="eyebrow">{metric.label}</p>
-              <p className="text-2xl font-semibold">{metric.value}</p>
-              <p className="subtle-text">{metric.description}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="grid-two">
-        <div className="section-card space-y-4">
-          <p className="eyebrow">Navigator</p>
-          <h3 className="text-xl font-semibold">Evidence dashboards</h3>
-          <p className="subtle-text">
-            Review dedicated panels for clinical, literature, patent, and market intelligence. Monotone palette keeps focus on the signal.
+    <div className="flex flex-col items-center justify-center space-y-12 py-12 md:py-24 lg:py-32">
+      <div className="container flex flex-col items-center text-center gap-6 max-w-3xl">
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl bg-clip-text text-transparent bg-linear-to-r from-white to-gray-400">
+            PhaGen Agentic
+          </h1>
+          <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">
+            Molecule Scouting in Minutes.
+            <br />
+            Orchestrate clinical, literature, patent, and market agents to accelerate repurposing decisions.
           </p>
-          <div className="flex flex-wrap gap-2">
-            <Link className="chip" href="/evidence/clinical">
-              Clinical
-            </Link>
-            <Link className="chip" href="/evidence/literature">
-              Literature
-            </Link>
-            <Link className="chip" href="/evidence/patent">
-              Patent
-            </Link>
-            <Link className="chip" href="/evidence/market">
-              Market
-            </Link>
-          </div>
         </div>
-        <div className="section-card space-y-4">
-          <p className="eyebrow">Workspace</p>
-          <h3 className="text-xl font-semibold">Reporting & history</h3>
-          <p className="subtle-text">
-            Export PDF/JSON deliverables in the report viewer, or reopen any past run straight from the history table.
-          </p>
-          <div className="flex gap-3">
-            <Link href="/reports" className="btn-secondary">
-              Open report layout
-            </Link>
-            <Link href="/history" className="btn-secondary">
-              View history
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <section className="section-card space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="eyebrow">Recent molecules</p>
-            <h3 className="text-xl font-semibold">Latest saved runs</h3>
-          </div>
-          <Link href="/history" className="btn-secondary">
-            See all
+        <div className="flex flex-col gap-4 min-[400px]:flex-row">
+          <Link href="/molecule">
+            <Button size="lg" className="h-12 px-8">
+              <Search className="mr-2 h-4 w-4" />
+              Start New Analysis
+            </Button>
+          </Link>
+          <Link href="/molecule?demo=true">
+            <Button variant="outline" size="lg" className="h-12 px-8">
+              <Beaker className="mr-2 h-4 w-4" />
+              Try Demo Molecule
+            </Button>
           </Link>
         </div>
-        <div className="table-shell">
-          <table>
-            <thead>
-              <tr>
-                <th>Molecule</th>
-                <th>Date</th>
-                <th>Recommendation</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recent.map((run) => (
-                <tr key={run.molecule}>
-                  <td>{run.molecule}</td>
-                  <td>{run.date}</td>
-                  <td>{run.recommendation}</td>
-                  <td>{run.status}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      </div>
+
+      <div className="container max-w-5xl space-y-8">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <History className="h-6 w-6" />
+            Recent Analyses
+          </h2>
+          <Link href="/history">
+            <Button variant="ghost" className="text-muted-foreground">View all</Button>
+          </Link>
         </div>
-      </section>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          {recent.map((run) => (
+            <Card key={run.id} className="bg-card/50 backdrop-blur transition-all hover:bg-card/80 hover:shadow-md border-muted">
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-start">
+                  <CardTitle className="text-lg font-medium">{run.molecule}</CardTitle>
+                  <Badge variant={run.recommendation === "GO" ? "default" : run.recommendation === "NO-GO" ? "destructive" : "secondary"}>
+                    {run.recommendation}
+                  </Badge>
+                </div>
+                <CardDescription>{run.date}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex justify-between items-center mt-4">
+                  <span className="text-sm text-muted-foreground">Status: {run.status}</span>
+                  <Link href={`/results?id=${run.id}`}>
+                    <Button variant="ghost" size="sm" className="gap-1">
+                      Open <ArrowRight className="h-3 w-3" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+      
+      <div className="container max-w-5xl grid gap-8 md:grid-cols-3 pt-12">
+         <div className="flex flex-col items-center text-center space-y-2 p-6 rounded-lg border bg-card/30">
+            <div className="p-3 rounded-full bg-primary/10 text-primary">
+               <FileText className="h-6 w-6" />
+            </div>
+            <h3 className="text-xl font-bold">Comprehensive Reports</h3>
+            <p className="text-sm text-muted-foreground">Generate full PDF reports with citations, evidence tables, and market analysis.</p>
+         </div>
+         <div className="flex flex-col items-center text-center space-y-2 p-6 rounded-lg border bg-card/30">
+            <div className="p-3 rounded-full bg-primary/10 text-primary">
+               <Beaker className="h-6 w-6" />
+            </div>
+            <h3 className="text-xl font-bold">Multi-Agent AI</h3>
+            <p className="text-sm text-muted-foreground">Specialized agents for clinical trials, literature, patents, and market data.</p>
+         </div>
+         <div className="flex flex-col items-center text-center space-y-2 p-6 rounded-lg border bg-card/30">
+            <div className="p-3 rounded-full bg-primary/10 text-primary">
+               <Search className="h-6 w-6" />
+            </div>
+            <h3 className="text-xl font-bold">Deep Search</h3>
+            <p className="text-sm text-muted-foreground">RAG-powered retrieval across millions of documents and trial records.</p>
+         </div>
+      </div>
     </div>
   );
 }

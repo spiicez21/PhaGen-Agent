@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { EvidenceTabs } from "../components/EvidenceTabs";
 import { DEMO_JOB, MARKET_METRICS, SAMPLE_PAYLOAD } from "../sample-data";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ArrowRight, BarChart3, BookOpen, FileText, Microscope, Scale, AlertTriangle, CheckCircle2, Info } from "lucide-react";
 
 export default function ResultsPage() {
   const workers = SAMPLE_PAYLOAD.workers;
@@ -16,185 +20,214 @@ export default function ResultsPage() {
   };
 
   return (
-    <div className="section-stack">
-      <section className="grid-two">
-        <div className="section-card space-y-4">
-          <p className="eyebrow">Innovation story</p>
-          <h1 className="text-2xl font-semibold">Pirfenidone overview</h1>
-          <p className="subtle-text">
-            Recommendation: {SAMPLE_PAYLOAD.recommendation} · Report V{reportVersion}
-          </p>
-          <p>{SAMPLE_PAYLOAD.innovation_story}</p>
-          <div className="flex gap-3">
-            <Link className="btn-primary" href="/reports">
-              Download-ready report
-            </Link>
-            <Link className="btn-secondary" href="/evidence/clinical">
-              Dive into evidence
-            </Link>
-          </div>
-        </div>
-        <div className="section-card">
-          <h2 className="section-title">Key figures</h2>
-          <div className="metrics-grid">
-            {MARKET_METRICS.map((metric) => (
-              <div key={metric.label} className="metric-card space-y-2">
-                <p className="eyebrow">{metric.label}</p>
-                <p className="text-2xl font-semibold">{metric.value}</p>
-                <p className="subtle-text">{metric.description}</p>
+    <div className="space-y-8 py-8">
+      <div className="grid gap-8 md:grid-cols-3">
+        <div className="md:col-span-2 space-y-8">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <CardTitle className="text-2xl">Pirfenidone Overview</CardTitle>
+                  <CardDescription>Innovation Story & Recommendation</CardDescription>
+                </div>
+                <Badge variant={SAMPLE_PAYLOAD.recommendation === "GO" ? "default" : "destructive"} className="text-lg px-4 py-1">
+                  {SAMPLE_PAYLOAD.recommendation}
+                </Badge>
               </div>
-            ))}
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="prose prose-invert max-w-none">
+                <p className="text-lg leading-relaxed text-muted-foreground">
+                  {SAMPLE_PAYLOAD.innovation_story}
+                </p>
+              </div>
+              
+              <div className="flex flex-wrap gap-4 pt-4">
+                <Link href="/reports">
+                  <Button>
+                    <FileText className="mr-2 h-4 w-4" /> Download Report (V{reportVersion})
+                  </Button>
+                </Link>
+                <Link href="/evidence/clinical">
+                  <Button variant="secondary">
+                    Dive into Evidence <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-4 md:grid-cols-2">
+             {Object.entries(workers).map(([key, worker]) => (
+                <Card key={key} className="bg-card/50">
+                   <CardHeader className="pb-2">
+                      <CardTitle className="text-base capitalize flex items-center gap-2">
+                         {key === 'clinical' && <Microscope className="h-4 w-4" />}
+                         {key === 'literature' && <BookOpen className="h-4 w-4" />}
+                         {key === 'patent' && <Scale className="h-4 w-4" />}
+                         {key === 'market' && <BarChart3 className="h-4 w-4" />}
+                         {key} Analysis
+                      </CardTitle>
+                   </CardHeader>
+                   <CardContent>
+                      <p className="text-sm text-muted-foreground line-clamp-3">
+                         {worker.summary}
+                      </p>
+                      <Link href={`/evidence/${key}`} className="text-xs text-primary hover:underline mt-2 inline-block">
+                         View details
+                      </Link>
+                   </CardContent>
+                </Card>
+             ))}
           </div>
         </div>
-      </section>
 
-      {structure && (
-        <section className="section-card space-y-4">
-          <div>
-            <p className="eyebrow">Molecular structure</p>
-            <h2 className="text-xl font-semibold">SMILES preview</h2>
-            <p className="subtle-text">{structure.smiles}</p>
-            {structure.source_type && structure.source_reference && (
-              <p className="text-sm text-neutral-600">
-                Source: {structure.source_type.toUpperCase()} · {structure.source_reference}
-              </p>
-            )}
-            {structure.generated_at && (
-              <p className="text-xs text-neutral-500">Generated {structure.generated_at}</p>
-            )}
-            {structure.license && (
-              <p className="text-xs text-neutral-500">License: {structure.license}</p>
-            )}
-            {structure.image_id && (
-              <p className="text-xs text-neutral-500">Image ID: {structure.image_id}</p>
-            )}
-          </div>
-          {structure.svg ? (
-            <div
-              className="rounded-2xl border border-neutral-200 bg-white p-4"
-              dangerouslySetInnerHTML={{ __html: structure.svg }}
-            />
-          ) : (
-            <p className="text-sm text-red-700">{structure.error ?? "Structure unavailable."}</p>
+        <div className="space-y-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Key Figures</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {MARKET_METRICS.map((metric) => (
+                <div key={metric.label} className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">{metric.label}</p>
+                  <p className="text-2xl font-bold">{metric.value}</p>
+                  <p className="text-xs text-muted-foreground">{metric.description}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {structure && (
+             <Card>
+                <CardHeader>
+                   <CardTitle>Structure</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center justify-center bg-white/5 rounded-md p-4 space-y-4">
+                   {structure.svg ? (
+                      <div
+                        className="w-full h-48 flex items-center justify-center bg-white rounded p-2"
+                        dangerouslySetInnerHTML={{ __html: structure.svg }}
+                      />
+                   ) : (
+                      <div className="text-center text-muted-foreground text-sm py-8">
+                         Structure Preview Unavailable
+                      </div>
+                   )}
+                   <div className="text-center w-full">
+                      <div className="text-xs font-mono break-all opacity-50 bg-black/20 p-2 rounded">
+                         {structure.smiles}
+                      </div>
+                      {structure.source_type && (
+                         <p className="text-[10px] text-muted-foreground mt-2">
+                            Source: {structure.source_type.toUpperCase()}
+                         </p>
+                      )}
+                   </div>
+                </CardContent>
+             </Card>
           )}
-          {structure.path && (
-            <p className="subtle-text">SVG asset: {structure.path}</p>
-          )}
-          {structure.metadata_path && (
-            <p className="subtle-text">Provenance: {structure.metadata_path}</p>
-          )}
-        </section>
-      )}
+        </div>
+      </div>
 
       {quality && (
-        <section className="section-card space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="eyebrow">Quality guardrails</p>
-              <h2 className="text-xl font-semibold">Retrieval health</h2>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <CardTitle>Retrieval Health</CardTitle>
+                <CardDescription>Quality guardrails and evidence coverage</CardDescription>
+              </div>
+              <Badge variant={quality.status === "pass" ? "outline" : "destructive"} className={quality.status === "pass" ? "text-green-500 border-green-500" : ""}>
+                {quality.status === "pass" ? "Pass" : "Needs Attention"}
+              </Badge>
             </div>
-            <span
-              className={`px-3 py-1 rounded-full text-sm font-semibold ${qualityStatusTone[quality.status] ?? "bg-neutral-200 text-neutral-800"}`}
-            >
-              {quality.status === "pass"
-                ? "Pass"
-                : quality.status === "needs_attention"
-                  ? "Needs attention"
-                  : "Investigate"}
-            </span>
-          </div>
-          <p className="subtle-text">
-            Metrics and alerts reflect how much evidence each worker gathered. Use them to catch thin coverage or anomalous retrieval runs before sharing results.
-          </p>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {Object.keys(quality.alerts).length > 0 ? (
+              <div className="space-y-3">
+                {Object.entries(quality.alerts).map(([worker, alerts]) => (
+                  <div key={worker} className="rounded-md border border-amber-500/20 bg-amber-500/10 p-4">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-amber-500 mb-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      <span className="capitalize">{worker} Alerts</span>
+                    </div>
+                    <ul className="list-disc list-inside text-sm text-muted-foreground">
+                      {alerts.map((alert, index) => (
+                        <li key={index}>{alert}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-md border border-green-500/20 bg-green-500/10 p-4 flex items-center gap-2 text-green-500">
+                <CheckCircle2 className="h-5 w-5" />
+                <span className="text-sm font-medium">All workers met minimum evidence thresholds.</span>
+              </div>
+            )}
 
-          {Object.keys(quality.alerts).length ? (
-            <div className="space-y-3">
-              {Object.entries(quality.alerts).map(([worker, alerts]) => (
-                <article key={worker} className="rounded-2xl border border-amber-200 bg-amber-50 p-3">
-                  <header className="flex items-center gap-2 text-sm font-semibold text-amber-900">
-                    <span className="badge">{worker}</span>
-                    <span>Alerts</span>
-                  </header>
-                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-900">
-                    {alerts.map((alert, index) => (
-                      <li key={`${worker}-alert-${index}`}>{alert}</li>
-                    ))}
-                  </ul>
-                </article>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {Object.entries(quality.metrics).map(([worker, metrics]) => (
+                <div key={worker} className="rounded-lg border bg-card p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Badge variant="secondary" className="capitalize">{worker}</Badge>
+                    <span className="text-xs text-muted-foreground">{metrics.evidence_count} items</span>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Coverage</span>
+                      <span className="font-medium">{(metrics.coverage_ratio * 100).toFixed(0)}%</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Precision</span>
+                      <span className="font-medium">{(metrics.precision_proxy * 100).toFixed(0)}%</span>
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
-          ) : (
-            <p className="rounded-2xl border border-emerald-100 bg-emerald-50 p-3 text-sm text-emerald-900">
-              All workers met the minimum evidence thresholds. No alerts at this time.
-            </p>
-          )}
-
-          <div className="grid-two">
-            {Object.entries(quality.metrics).map(([worker, metrics]) => (
-              <article key={worker} className="space-y-2 rounded-2xl border border-neutral-200 p-4">
-                <header className="flex items-center justify-between">
-                  <span className="badge">{worker}</span>
-                  <span className="text-sm text-neutral-500">
-                    {metrics.evidence_count} evidence · {metrics.unique_sources} sources
-                  </span>
-                </header>
-                <dl className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <dt className="subtle-text">Coverage</dt>
-                    <dd className="font-semibold">{(metrics.coverage_ratio * 100).toFixed(0)}%</dd>
-                  </div>
-                  <div>
-                    <dt className="subtle-text">Precision proxy</dt>
-                    <dd className="font-semibold">{(metrics.precision_proxy * 100).toFixed(0)}%</dd>
-                  </div>
-                  <div>
-                    <dt className="subtle-text">Passages pulled</dt>
-                    <dd className="font-semibold">{metrics.final_passages}/{metrics.retriever_top_k}</dd>
-                  </div>
-                  <div>
-                    <dt className="subtle-text">High-confidence cites</dt>
-                    <dd className="font-semibold">{metrics.high_conf_evidence}</dd>
-                  </div>
-                </dl>
-              </article>
-            ))}
-          </div>
-        </section>
+          </CardContent>
+        </Card>
       )}
-
-      <EvidenceTabs workers={workers} reportJobId={DEMO_JOB.id} reportVersion={reportVersion} />
+      
+      <div className="pt-8">
+         <EvidenceTabs workers={workers} reportJobId={DEMO_JOB.id} reportVersion={reportVersion} />
+      </div>
 
       {validation && (
-        <section className="section-card space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="eyebrow">Validation pass</p>
-              <h2 className="text-xl font-semibold">Claim traceability</h2>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <CardTitle>Claim Traceability</CardTitle>
+                <CardDescription>Validation pass for innovation story claims</CardDescription>
+              </div>
+              <Badge variant="outline">
+                {validation.claims_linked}/{validation.claims_total} claims linked
+              </Badge>
             </div>
-            <span className={`validation-chip validation-chip--${validation.status}`}>
-              {validation.claims_linked}/{validation.claims_total} claims linked
-            </span>
-          </div>
-          <p className="subtle-text">
-            Every sentence in the innovation story carries an evidence ID so reviewers can trace claims back to primary sources.
-          </p>
-          <div className="validation-claims">
-            {validation.claim_links.map((claim) => (
-              <article key={claim.claim_id} className="validation-claim space-y-2">
-                <header className="flex flex-wrap items-center gap-2">
-                  <span className="badge">{claim.worker}</span>
-                  <span className="confidence-pill">
-                    {claim.status === "linked" ? "Linked" : "Needs review"}
-                  </span>
-                </header>
-                <p>{claim.claim_text}</p>
-                <p className="subtle-text">
-                  Evidence IDs · {claim.evidence_ids.length ? claim.evidence_ids.join(", ") : "None"}
-                </p>
-              </article>
-            ))}
-          </div>
-        </section>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {validation.claim_links.map((claim) => (
+                <div key={claim.claim_id} className="rounded-lg border bg-card/50 p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Badge variant="secondary" className="capitalize">{claim.worker}</Badge>
+                    <Badge variant={claim.status === "linked" ? "outline" : "destructive"} className={claim.status === "linked" ? "text-green-500 border-green-500" : ""}>
+                      {claim.status === "linked" ? "Linked" : "Needs Review"}
+                    </Badge>
+                  </div>
+                  <p className="text-sm">{claim.claim_text}</p>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Info className="h-3 w-3" />
+                    Evidence IDs: {claim.evidence_ids.length ? claim.evidence_ids.join(", ") : "None"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
