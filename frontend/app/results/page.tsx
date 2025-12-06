@@ -131,17 +131,24 @@ function ResultsPage() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Card className="max-w-md">
-          <CardHeader>
+          <CardHeader className="space-y-3">
+            <div className="h-1 w-8 bg-destructive rounded-full" />
             <CardTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-5 w-5" />
-              Error
+              Error Loading Results
             </CardTitle>
+            <CardDescription>Unable to fetch job results</CardDescription>
           </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">{error}</p>
-            <div className="mt-4">
-              <Link href="/history">
-                <Button variant="outline">View History</Button>
+          <CardContent className="space-y-4">
+            <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20">
+              <p className="text-sm text-destructive">{error}</p>
+            </div>
+            <div className="flex gap-3">
+              <Link href="/molecule" className="flex-1">
+                <Button className="w-full" size="sm">Start New Analysis</Button>
+              </Link>
+              <Link href="/history" className="flex-1">
+                <Button variant="outline" className="w-full" size="sm">View History</Button>
               </Link>
             </div>
           </CardContent>

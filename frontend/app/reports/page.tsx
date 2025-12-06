@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { DEMO_JOB, REPORT_SECTIONS, SAMPLE_PAYLOAD } from "../sample-data";
+import { REPORT_SECTIONS, SAMPLE_PAYLOAD } from "../sample-data";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ const downloadBlob = (blob: Blob, filename: string) => {
 };
 
 export default function ReportsPage() {
-  const [jobId, setJobId] = useState<string>(DEMO_JOB.id);
+  const [jobId, setJobId] = useState<string>("");
   const [isDownloading, setIsDownloading] = useState(false);
   const [isExportingJson, setIsExportingJson] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -88,13 +88,10 @@ export default function ReportsPage() {
   return (
     <div className="space-y-8 py-8">
       <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-            <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">Workspace</span>
-            <span>Deliverables</span>
-          </div>
+        <CardHeader className="space-y-3">
+          <div className="h-1 w-8 bg-primary rounded-full" />
           <CardTitle className="text-2xl">Report Workspace</CardTitle>
-          <CardDescription>
+          <CardDescription className="leading-relaxed">
             Review, edit, and export the structured report. PDF + JSON export hooks connect directly to the backend jobs API.
           </CardDescription>
         </CardHeader>
