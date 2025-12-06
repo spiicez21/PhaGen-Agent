@@ -77,7 +77,7 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 
 ### Quality, guardrails, and ops
 - [ ] Prepare the hackathon demo script, slides, and fallback assets outlined in Section 11.
-- [ ] SLA-style logging: latency, token usage, and failure counts per worker.
+- [x] SLA-style logging: latency, token usage, and failure counts per worker.
 
 #### ➕ Added — Security & Compliance (Core)
 - [ ] Zero Data Retention (ZDR) mode flag that disables persistence of input documents/user uploads (clear memory + no S3 writes).

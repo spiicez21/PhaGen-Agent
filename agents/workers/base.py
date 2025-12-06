@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
@@ -13,6 +14,56 @@ from ..temperature import resolve_worker_temperature
 
 
 logger = logging.getLogger(__name__)
+
+
+class WorkerSLAMetrics:
+    """SLA metrics tracker for worker performance monitoring."""
+    def __init__(self, worker_name: str):
+        self.worker_name = worker_name
+        self.start_time = time.time()
+        self.retrieval_time = 0.0
+        self.llm_time = 0.0
+        self.total_tokens = 0
+        self.retrieval_calls = 0
+        self.llm_calls = 0
+        self.failures = []
+    
+    def record_retrieval(self, duration: float):
+        self.retrieval_time += duration
+        self.retrieval_calls += 1
+    
+    def record_llm(self, duration: float, tokens: int):
+        self.llm_time += duration
+        self.llm_calls += 1
+        self.total_tokens += tokens
+    
+    def record_failure(self, stage: str, error: str):
+        self.failures.append({"stage": stage, "error": str(error)[:200]})
+    
+    def finalize(self) -> dict:
+        total_time = time.time() - self.start_time
+        return {
+            "worker": self.worker_name,
+            "total_latency_ms": round(total_time * 1000, 2),
+            "retrieval_latency_ms": round(self.retrieval_time * 1000, 2),
+            "llm_latency_ms": round(self.llm_time * 1000, 2),
+            "retrieval_calls": self.retrieval_calls,
+            "llm_calls": self.llm_calls,
+            "total_tokens": self.total_tokens,
+            "failure_count": len(self.failures),
+            "failures": self.failures if self.failures else None,
+        }
+    
+    def log_summary(self):
+        metrics = self.finalize()
+        logger.info(
+            f"[SLA] {self.worker_name}: "
+            f"latency={metrics['total_latency_ms']}ms "
+            f"(retrieval={metrics['retrieval_latency_ms']}ms, "
+            f"llm={metrics['llm_latency_ms']}ms), "
+            f"tokens={metrics['total_tokens']}, "
+            f"failures={metrics['failure_count']}"
+        )
 
 
 class Worker(ABC):
@@ -48,50 +99,81 @@ class Worker(ABC):
         raise NotImplementedError
 
     def run(self, request: WorkerRequest) -> WorkerResult:
-        queries = self._build_query_terms(request)
+        sla = WorkerSLAMetrics(self.name)
+        
+        try:
+            queries = self._build_query_terms(request)
 
-        gathered: List[dict] = []
-        seen_ids: set[str] = set()
-        for term in queries:
-            self._record_api_budget()
-            results = self.retriever.search(
-                query=term,
-                source_type=self.name,
-                top_k=request.top_k,
-                max_tokens=request.context_tokens,
-            )
-            for result in results:
-                record_id = result.get("id") or f"{term}-{result.get('rank', len(gathered))}"
-                if record_id in seen_ids:
-                    continue
-                seen_ids.add(record_id)
-                gathered.append(result)
+            gathered: List[dict] = []
+            seen_ids: set[str] = set()
+            for term in queries:
+                self._record_api_budget()
+                retrieval_start = time.time()
+                try:
+                    results = self.retriever.search(
+                        query=term,
+                        source_type=self.name,
+                        top_k=request.top_k,
+                        max_tokens=request.context_tokens,
+                    )
+                    sla.record_retrieval(time.time() - retrieval_start)
+                except Exception as e:
+                    sla.record_failure("retrieval", str(e))
+                    sla.record_retrieval(time.time() - retrieval_start)
+                    raise
+                
+                for result in results:
+                    record_id = result.get("id") or f"{term}-{result.get('rank', len(gathered))}"
+                    if record_id in seen_ids:
+                        continue
+                    seen_ids.add(record_id)
+                    gathered.append(result)
+                    if len(gathered) >= request.top_k:
+                        break
                 if len(gathered) >= request.top_k:
                     break
-            if len(gathered) >= request.top_k:
-                break
 
-        if not gathered:
-            self._record_api_budget()
-            gathered = self.retriever.search(
-                query=request.molecule,
-                source_type=self.name,
-                top_k=request.top_k,
-                max_tokens=request.context_tokens,
+            if not gathered:
+                self._record_api_budget()
+                retrieval_start = time.time()
+                try:
+                    gathered = self.retriever.search(
+                        query=request.molecule,
+                        source_type=self.name,
+                        top_k=request.top_k,
+                        max_tokens=request.context_tokens,
+                    )
+                    sla.record_retrieval(time.time() - retrieval_start)
+                except Exception as e:
+                    sla.record_failure("retrieval_fallback", str(e))
+                    sla.record_retrieval(time.time() - retrieval_start)
+                    raise
+
+            ordered = sorted(gathered, key=self._source_rank)
+            limited = ordered[: request.top_k]
+            
+            # Track LLM usage in build_summary
+            self._current_sla = sla
+            result = self.build_summary(request, limited)
+            
+            result.metrics = self._compute_metrics(
+                gathered=gathered,
+                limited=limited,
+                queries=queries,
+                request=request,
+                result=result,
             )
-
-        ordered = sorted(gathered, key=self._source_rank)
-        limited = ordered[: request.top_k]
-        result = self.build_summary(request, limited)
-        result.metrics = self._compute_metrics(
-            gathered=gathered,
-            limited=limited,
-            queries=queries,
-            request=request,
-            result=result,
-        )
-        result.alerts = self._evaluate_guardrails(result.metrics)
-        return result
+            result.alerts = self._evaluate_guardrails(result.metrics)
+            
+            # Add SLA metrics to result
+            result.metrics["sla"] = sla.finalize()
+            sla.log_summary()
+            
+            return result
+        except Exception as e:
+            sla.record_failure("worker_run", str(e))
+            sla.log_summary()
+            raise
 
     def _build_query_terms(self, request: WorkerRequest) -> List[str]:
         terms: List[str] = []
@@ -237,15 +319,25 @@ class Worker(ABC):
             f"Evidence:\n{context}\n\n"
             "Write 2-3 crisp sentences, cite references like [1], and stay factual."
         )
+        
+        llm_start = time.time()
         try:
-            return self.llm.generate(
+            response = self.llm.generate(
                 prompt=user_prompt,
                 system_prompt=
                 "You are an expert analyst in a multi-agent molecule repurposing pipeline.",
                 temperature=self.temperature,
                 max_tokens=280,
             )
+            # Estimate tokens (4 chars per token heuristic)
+            estimated_tokens = len(user_prompt + response) // 4
+            if hasattr(self, '_current_sla'):
+                self._current_sla.record_llm(time.time() - llm_start, estimated_tokens)
+            return response
         except LLMClientError as exc:  # pragma: no cover - runtime dependency
+            if hasattr(self, '_current_sla'):
+                self._current_sla.record_failure("llm_summary", str(exc))
+                self._current_sla.record_llm(time.time() - llm_start, 0)
             logger.warning("LLM summary failed for %s: %s", self.name, exc)
             return fallback
 
