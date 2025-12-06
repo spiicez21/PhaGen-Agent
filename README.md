@@ -10,7 +10,7 @@ PhaGen Agentic is a hackathon-ready, agentic multi-worker platform that compress
 | Backend | FastAPI service with job orchestration endpoints backed by Postgres persistence |
 | Agents | Master agent plus four worker stubs wired to deterministic mock data and RAG hooks |
 | Crawler | Crawlee TypeScript project with seed list plus Section 5 normalization (boilerplate stripping, PII redaction, chunk metadata) |
-| Infra | Docker Compose file for local stack (Postgres, MinIO, Ollama, rdkit-service, services) |
+| Infra | Docker Compose file for optional local stack (MinIO, Ollama, rdkit-service, services) while Supabase hosts Postgres |
 
 The MVP mirrors the implementation plan in `ignore.md`. Build phases are mapped to repo folders so each team can work in parallel.
 
@@ -48,13 +48,13 @@ The repo-level `requirements.txt` simply pulls in `backend/requirements.txt` and
    pip install -r requirements.txt
    uvicorn app.main:app --reload
    ```
-   Set the following environment variables (or update `.env`) before starting the API so SQLAlchemy can connect to Postgres:
+   Set the following environment variables (or update `.env`) before starting the API so SQLAlchemy can connect to Supabase:
 
    ```bash
-   DATABASE_URL=postgresql+psycopg://phagen:phagen@localhost:5432/phagen
+   SUPABASE_URL=postgresql://postgres:<password>@db.<project>.supabase.co:5432/postgres
    DATABASE_ECHO=false  # flip to true for SQL logging
    ```
-   The default URL matches the `postgres` service in `infra/docker-compose.yml`. Update the value if you run Postgres elsewhere (e.g., managed cloud instance) or temporarily point it at `sqlite:///./phagen.db` when developing without a database container.
+   Copy the `psycopg` URI from **Supabase → Project Settings → Database → Connection string** and paste it into `SUPABASE_URL` (or `DATABASE_URL` if you prefer the legacy name). When Supabase is unreachable, point the backend at SQLite temporarily with `DATABASE_URL=sqlite:///./phagen.db`.
 
    Object storage (MinIO/S3-compatible) powers raw document snapshots and archived PDF exports. Configure the backend with:
 
@@ -105,7 +105,7 @@ The repo-level `requirements.txt` simply pulls in `backend/requirements.txt` and
 
 ### Section 10 — Automation & CI
 
-- **Local stack via Docker Compose**: from the repo root run `cd infra` followed by `docker compose up --build`. The compose file lifts Postgres, MinIO, Ollama, the RDKit renderer, the FastAPI backend, and the Next.js frontend on one bridge network with healthy dependencies. Stop everything with `docker compose down` (add `-v` to prune volumes) or target individual services such as `docker compose up api frontend` during development.
+- **Local stack via Docker Compose**: from the repo root run `cd infra` followed by `docker compose up --build`. The compose file now focuses on optional services (MinIO, Ollama, rdkit-service, frontend/backend wiring); the operational database lives in Supabase, so you can skip the Postgres container entirely unless you need an offline fallback. Stop everything with `docker compose down` (add `-v` to prune volumes) or target individual services such as `docker compose up api frontend` during development.
 - **Continuous integration**: `.github/workflows/ci.yml` executes on every push/PR to `main`, installing Python + Node dependencies, running backend `pytest`, linting the frontend with `npm run lint`, and ensuring all Docker images build cleanly through `docker compose build`. Use it as the reference pipeline when extending Section 10’s test/image requirements.
 
 ## Architecture overview
@@ -150,6 +150,20 @@ See `docs/architecture.md` for the full sequence diagram and responsibilities pe
 4. Redeploy/restart workers if the embeddings or retriever settings change so new sources are picked up.
 
 This API-first crawl honors robots.txt (see `crawler/src/robots.ts`) and caps page fragments at 5 KB before indexing. Extend the schema if you add new corpora.
+
+## Evaluation suite
+
+Use the fixtures under `evals/` to guard critical behaviors before shipping.
+
+```powershell
+python evals/run_eval.py                 # validate against stored fixtures
+python evals/run_eval.py --mode live     # hit a running /api/jobs stack
+```
+
+`evals/cases.json` documents five benchmark molecules (Pirfenidone, Metformin,
+Nintedanib, Lenabasum, Pamrevlumab) plus expectation bands for recommendations,
+market scores, minimum evidence, and quality status. Add new fixtures under
+`evals/fixtures/` whenever we expand coverage.
 
 ## Export & reporting
 

@@ -1,0 +1,42 @@
+{
+  "payload": {
+    "molecule": "Nintedanib",
+    "recommendation": "No-Go",
+    "market_score": 48,
+    "innovation_story": "Nintedanib continues to underperform in systemic sclerosis lung cohorts, with dose-limiting liver toxicity and expiring IP leaving little upside for repurposing beyond its approved IPF label.",
+    "workers": {
+      "clinical": {
+        "summary": "Phase 2 SSc-ILD add-on failed to hit FVC endpoints and showed elevated discontinuations from hepatic AEs.",
+        "confidence": 0.42,
+        "confidence_band": "low",
+        "evidence": [
+          {
+            "type": "Trial",
+            "text": "SENSCIS sub-study reported -95 mL vs placebo with 18% discontinuations due to liver enzyme spikes.",
+            "url": "https://clinicaltrials.gov/study/NCT02597933",
+            "confidence": 0.4
+          }
+        ]
+      },
+      "patent": {
+        "summary": "Core composition patents lapse by 2026 and combination filings are already contested across EU courts.",
+        "confidence": 0.46,
+        "confidence_band": "low",
+        "evidence": [
+          {
+            "type": "Patent",
+            "text": "EP2245213 opposition decision limits exclusivity to specific crystalline forms, exposing generics.",
+            "url": "https://example.org/patent/ep2245213",
+            "confidence": 0.42
+          }
+        ]
+      }
+    },
+    "quality": {
+      "status": "investigate",
+      "alerts": {
+        "clinical": ["Low precision proxy (0.40 < 0.50)"]
+      }
+    }
+  }
+}

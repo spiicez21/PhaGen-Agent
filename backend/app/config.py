@@ -1,6 +1,10 @@
 from functools import lru_cache
-from pydantic import Field
+from pathlib import Path
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings
+
+
+PROJECT_ROOT_ENV = Path(__file__).resolve().parents[2] / ".env"
 
 
 class Settings(BaseSettings):
@@ -9,6 +13,7 @@ class Settings(BaseSettings):
     job_ttl_minutes: int = Field(default=60)
     database_url: str = Field(
         default="postgresql+psycopg://phagen:phagen@localhost:5432/phagen",
+        validation_alias=AliasChoices("DATABASE_URL", "SUPABASE_URL"),
         description="SQLAlchemy connection string for the operational database.",
     )
     database_echo: bool = Field(default=False)
@@ -22,7 +27,7 @@ class Settings(BaseSettings):
     s3_reports_bucket: str = Field(default="phagen-report-artifacts")
 
     class Config:
-        env_file = ".env"
+        env_file = str(PROJECT_ROOT_ENV)
         env_file_encoding = "utf-8"
 
 
