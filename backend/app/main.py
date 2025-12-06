@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Ensure repo root (parent of backend) is in sys.path so `agents` is importable.
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
+
+# Load .env from repo root, overriding system environment variables
+load_dotenv(ROOT / ".env", override=True)
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
