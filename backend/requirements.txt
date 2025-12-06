@@ -11,6 +11,7 @@ onnxruntime==1.19.2
 SQLAlchemy==2.0.31
 psycopg[binary]==3.2.1
 boto3==1.35.26
+cryptography>=42.0.0
 
 # ML/caching/task queue dependencies
 redis>=5.0.0
