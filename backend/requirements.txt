@@ -12,6 +12,9 @@ SQLAlchemy==2.0.31
 psycopg[binary]==3.2.1
 boto3==1.35.26
 cryptography>=42.0.0
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart>=0.0.18
 
 # ML/caching/task queue dependencies
 redis>=5.0.0

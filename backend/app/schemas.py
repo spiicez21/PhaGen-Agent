@@ -47,3 +47,36 @@ class JobResponse(BaseModel):
     payload: Dict[str, Any] | None = None
     recommendation: Optional[Recommendation] = None
     report_version: Optional[int] = None
+
+
+# Authentication Schemas
+class UserBase(BaseModel):
+    email: str
+    name: str
+
+
+class UserCreate(UserBase):
+    password: str = Field(min_length=8)
+
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+
+class UserResponse(UserBase):
+    id: str
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class TokenData(BaseModel):
+    email: Optional[str] = None

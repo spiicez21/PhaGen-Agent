@@ -35,6 +35,14 @@ class Settings(BaseSettings):
     cache_enabled: bool = Field(default=True)
     celery_broker_url: str = Field(default="redis://localhost:6379/1")
     celery_result_backend: str = Field(default="redis://localhost:6379/1")
+    
+    # JWT Authentication
+    secret_key: str = Field(
+        default="your-secret-key-change-in-production-min-32-chars-long",
+        description="Secret key for JWT token generation (minimum 32 characters)"
+    )
+    algorithm: str = Field(default="HS256")
+    access_token_expire_minutes: int = Field(default=30)
 
 
 @lru_cache

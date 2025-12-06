@@ -38,6 +38,15 @@ def get_session() -> Iterator[Session]:
         session.close()
 
 
+def get_db() -> Iterator[Session]:
+    """FastAPI dependency for database sessions."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
 def init_db() -> None:
     """Create tables if they do not already exist."""
     from sqlalchemy.exc import SQLAlchemyError

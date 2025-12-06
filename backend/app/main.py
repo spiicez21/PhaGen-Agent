@@ -34,6 +34,7 @@ from .database import init_db
 from .routers import jobs as jobs_router
 from .routers import health as health_router
 from .routers import feedback as feedback_router
+from .routers import auth as auth_router
 from .cache import get_cache
 
 settings = get_settings()
@@ -62,6 +63,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth_router.router)
 app.include_router(jobs_router.router)
 app.include_router(health_router.router)
 app.include_router(feedback_router.router)
