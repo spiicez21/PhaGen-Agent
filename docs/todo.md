@@ -64,6 +64,8 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - API call budget monitor now tracks NCBI/OpenFDA usage per minute/day, escalates status into the job quality payload, and exposes a UI panel warning reviewers before rate-limit breaches.
 - LLM temperature map is now standardized per worker + master synthesis step, with env overrides (`LLM_TEMP_DEFAULT`, `LLM_TEMP_<WORKER>`, `LLM_TEMP_MASTER`) to keep tone consistent across runs.
 - Eval suite now lives under `evals/` with five benchmark molecules, JSON fixtures, and `run_eval.py` so CI/local devs can verify recommendations, guardrails, and evidence coverage before merging.
+- SLA-style logging now tracks latency (retrieval/LLM breakdown), token usage, and failure counts per worker via `WorkerSLAMetrics` class, with metrics exposed in job payloads under `result.metrics["sla"]` for observability dashboards.
+- Security test suite now validates ZDR mode (`test_zdr_mode.py` - temp file purging, S3 write prevention), network egress controls (`test_egress_security.py` - external host blocking, internal allowlist), and container vulnerabilities (GitHub Actions workflow with Trivy scanning on rdkit-service and backend images, static analysis with Bandit, dependency scanning with Snyk/Safety).
 
 ## 🔜 Pending
 ### Phase UI — Experience & admin
@@ -77,7 +79,6 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 
 ### Quality, guardrails, and ops
 - [ ] Prepare the hackathon demo script, slides, and fallback assets outlined in Section 11.
-- [x] SLA-style logging: latency, token usage, and failure counts per worker.
 
 #### ➕ Added — Security & Compliance (Core)
 - [ ] Zero Data Retention (ZDR) mode flag that disables persistence of input documents/user uploads (clear memory + no S3 writes).
@@ -98,9 +99,9 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - [ ] Privacy & legal review pack (privacy FAQ, data use statement, legal review dossier).
 
 #### ➕ Added — Security Tests & Validation
-- [ ] Automated test verifying ZDR mode purges temp files and prevents S3 writes.
-- [ ] CI job running static analysis plus container vulnerability scan (Trivy) on `rdkit-service` and other images.
-- [ ] E2E security smoke test that attempts egress from agents; CI fails if egress succeeds in locked deployments.
+- [x] Automated test verifying ZDR mode purges temp files and prevents S3 writes.
+- [x] CI job running static analysis plus container vulnerability scan (Trivy) on `rdkit-service` and other images.
+- [x] E2E security smoke test that attempts egress from agents; CI fails if egress succeeds in locked deployments.
 
 ### Stretch / future
 - [ ] Track stretch ideas from Section 12 (active learning loop, patent semantic matching, continuous crawler, etc.) once the MVP is stable.
