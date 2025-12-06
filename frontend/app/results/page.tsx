@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { EvidenceTabs } from "../components/EvidenceTabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, BarChart3, BookOpen, FileText, Microscope, Scale, AlertTriangle, CheckCircle2, Info, Loader2, Download, FileJson } from "lucide-react";
 import { api } from "@/lib/api";
+import { jobStore } from "@/lib/store";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 // Export utilities
@@ -51,32 +52,106 @@ const exportToCSV = (data: any, filename: string) => {
 
 function ResultsPage() {
   const searchParams = useSearchParams();
-  const jobId = searchParams.get("id");
+  const router = useRouter();
+  const urlJobId = searchParams.get("id");
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [jobData, setJobData] = useState<any>(null);
   const [exporting, setExporting] = useState(false);
+  const [jobId, setJobId] = useState<string | null>(urlJobId);
+
+  // Auto-detect completed job if no ID provided
+  useEffect(() => {
+    const initJob = async () => {
+      if (!urlJobId) {
+        const recentJobs = jobStore.getAll();
+        console.log('[Results] Auto-detection: Found', recentJobs.length, 'jobs in history');
+        
+        // Priority 1: Find most recent completed job
+        let targetJob = recentJobs.find(j => j.status.toLowerCase() === "completed");
+        
+        // Priority 2: If no completed jobs, check for any ongoing jobs and redirect
+        if (!targetJob) {
+          const ongoingJob = recentJobs.find(j => {
+            const status = j.status.toLowerCase();
+            return status === "running" || status === "pending";
+          });
+          if (ongoingJob) {
+            console.log('[Results] No completed jobs, but found ongoing job. Redirecting to job status:', ongoingJob.job_id);
+            router.push(`/job?id=${ongoingJob.job_id}`);
+            return;
+          }
+        }
+        
+        // Priority 3: Fall back to most recent job regardless of status
+        if (!targetJob && recentJobs.length > 0) {
+          targetJob = recentJobs[0]; // Most recent job
+          console.log('[Results] Using most recent job from history:', targetJob.job_id, 'with status:', targetJob.status);
+        }
+        
+        if (targetJob) {
+          console.log('[Results] Auto-detected job:', targetJob.job_id);
+          setJobId(targetJob.job_id);
+          router.replace(`/results?id=${targetJob.job_id}`);
+          return;
+        }
+        
+        // No jobs at all in history
+        console.log('[Results] No jobs found in history');
+        setError("No jobs found. Please start a new analysis first.");
+        setLoading(false);
+        return;
+      }
+      
+      setJobId(urlJobId);
+    };
+
+    initJob();
+  }, [urlJobId, router]);
 
   useEffect(() => {
-    if (!jobId) {
-      setError("No job ID provided");
-      setLoading(false);
-      return;
-    }
+    if (!jobId) return;
 
     const fetchJob = async () => {
       try {
         const job = await api.getJob(jobId);
-        if (job.status === "completed" && job.payload) {
-          setJobData(job.payload);
-          setError(null);
-        } else if (job.status === "failed") {
-          setError("Job failed: " + (job.payload?.error || "Unknown error"));
+        console.log('[Results] Fetched job:', job.job_id, 'Status:', job.status, 'Has payload:', !!job.payload);
+        
+        const status = job.status.toLowerCase();
+        
+        if (status === "completed") {
+          // Check if payload exists and is not empty
+          if (job.payload) {
+            const payloadKeys = typeof job.payload === 'object' ? Object.keys(job.payload) : [];
+            console.log('[Results] Payload keys:', payloadKeys);
+            
+            if (payloadKeys.length > 0) {
+              console.log('[Results] Setting job data');
+              setJobData(job.payload);
+              setError(null);
+            } else {
+              console.log('[Results] Payload is empty');
+              setError("Job completed but results data is empty. Please try refreshing or contact support.");
+            }
+          } else {
+            console.log('[Results] No payload found');
+            setError("Job completed but results are not available. Please try again or contact support.");
+          }
+        } else if (status === "failed") {
+          const errorMsg = typeof job.payload === 'object' && job.payload && 'error' in job.payload 
+            ? String((job.payload as any).error) 
+            : "Unknown error";
+          setError("Job failed: " + errorMsg);
+        } else if (status === "running") {
+          setError("Job is still running. Please wait for it to complete or check the job status page.");
+        } else if (status === "pending") {
+          setError("Job is pending and hasn't started yet. Please check the job status page.");
         } else {
-          setError("Job is still " + job.status);
+          setError("Job status: " + job.status + ". Please check the job status page for details.");
         }
       } catch (err) {
+        console.error('[Results] Error fetching job:', err);
         setError(err instanceof Error ? err.message : "Failed to fetch job");
       } finally {
         setLoading(false);

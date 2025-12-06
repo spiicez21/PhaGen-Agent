@@ -27,19 +27,51 @@ function JobStatusPage() {
       // If no job ID in URL, try to find the most recent running/pending job
       if (!urlJobId) {
         const recentJobs = jobStore.getAll();
-        const ongoingJob = recentJobs.find(j => j.status === "running" || j.status === "pending");
+        console.log('[Job Status] Auto-detection: Found', recentJobs.length, 'jobs in history');
         
-        if (ongoingJob) {
-          // Found an ongoing job, use it and update URL
-          setJobId(ongoingJob.job_id);
-          router.replace(`/job?id=${ongoingJob.job_id}`);
-          return;
-        } else {
-          // No ongoing jobs found
-          setError("No active jobs found. Please start a new analysis or check your history.");
-          setLoading(false);
-          return;
+        // Priority 1: Look for running jobs
+        let targetJob = recentJobs.find(j => j.status.toLowerCase() === "running");
+        
+        // Priority 2: Look for pending jobs
+        if (!targetJob) {
+          targetJob = recentJobs.find(j => j.status.toLowerCase() === "pending");
         }
+        
+        // Priority 3: Get the most recent job regardless of status
+        if (!targetJob && recentJobs.length > 0) {
+          targetJob = recentJobs[0]; // Most recent job (already sorted by time)
+          console.log('[Job Status] No ongoing jobs, using most recent job:', targetJob.job_id, 'with status:', targetJob.status);
+        }
+        
+        if (targetJob) {
+          const status = targetJob.status.toLowerCase();
+          // Check if it's completed - redirect to results instead
+          if (status === "completed") {
+            console.log('[Job Status] Most recent job is completed, redirecting to results:', targetJob.job_id);
+            router.push(`/results?id=${targetJob.job_id}`);
+            return;
+          }
+          // Check if it's failed - still show it for review
+          else if (status === "failed") {
+            console.log('[Job Status] Most recent job failed, showing details:', targetJob.job_id);
+            setJobId(targetJob.job_id);
+            router.replace(`/job?id=${targetJob.job_id}`);
+            return;
+          }
+          // Ongoing job (running/pending)
+          else {
+            console.log('[Job Status] Auto-detected ongoing job:', targetJob.job_id);
+            setJobId(targetJob.job_id);
+            router.replace(`/job?id=${targetJob.job_id}`);
+            return;
+          }
+        }
+        
+        // No jobs at all in history
+        console.log('[Job Status] No jobs found in history');
+        setError("No jobs found. Please start a new analysis or check your history.");
+        setLoading(false);
+        return;
       }
       
       setJobId(urlJobId);
@@ -51,10 +83,16 @@ function JobStatusPage() {
   useEffect(() => {
     if (!jobId) return;
 
+    let pollTimeout: NodeJS.Timeout;
+    let redirectTimeout: NodeJS.Timeout;
+    
     const pollJob = async () => {
       try {
         const jobData = await api.getJob(jobId);
+        console.log('[Job Status] Poll result:', jobData.status, 'for job', jobId);
         setJob(jobData);
+        
+        const status = jobData.status.toLowerCase();
         
         // Update job status in store
         jobStore.update(jobId, {
@@ -64,20 +102,23 @@ function JobStatusPage() {
         });
         
         // If completed, redirect to results
-        if (jobData.status === "completed") {
-          setTimeout(() => {
+        if (status === "completed") {
+          console.log('[Job Status] Job completed, redirecting to results...');
+          redirectTimeout = setTimeout(() => {
             router.push(`/results?id=${jobId}`);
-          }, 1000);
+          }, 1500);
         }
         // If failed, stop polling
-        else if (jobData.status === "failed") {
+        else if (status === "failed") {
+          console.log('[Job Status] Job failed');
           setError("Job failed: " + (jobData.payload?.error || "Unknown error"));
         }
         // Continue polling if pending or running
-        else if (jobData.status === "pending" || jobData.status === "running") {
-          setTimeout(() => pollJob(), 3000); // Poll every 3 seconds
+        else if (status === "pending" || status === "running") {
+          pollTimeout = setTimeout(() => pollJob(), 3000); // Poll every 3 seconds
         }
       } catch (err) {
+        console.error('[Job Status] Polling error:', err);
         setError(err instanceof Error ? err.message : "Failed to fetch job");
       } finally {
         setLoading(false);
@@ -85,6 +126,12 @@ function JobStatusPage() {
     };
 
     pollJob();
+    
+    // Cleanup function
+    return () => {
+      if (pollTimeout) clearTimeout(pollTimeout);
+      if (redirectTimeout) clearTimeout(redirectTimeout);
+    };
   }, [jobId, router]);
 
   if (loading && !job) {
