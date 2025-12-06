@@ -9,6 +9,7 @@ from ..jobs import InMemoryJobStore, PostgresJobStore
 from ..reporting import generate_report_pdf
 from ..storage import store_report_pdf
 from ..schemas import JobCreateRequest, JobResponse, JobStatus
+from ..ml import generate_repurposing_suggestions
 
 try:
     from agents.master import MasterAgent
@@ -66,6 +67,14 @@ def _run_job(job_id: str, payload: JobCreateRequest) -> None:
         version = job_store.assign_report_version(job_id, serialized.get("molecule"))
         serialized["report_version"] = version
         _ensure_structure_metadata(job_id, serialized)
+        
+        # Generate repurposing suggestions
+        try:
+            suggestions = generate_repurposing_suggestions(job_id, serialized)
+            if suggestions:
+                serialized["repurposing_suggestions"] = suggestions
+        except Exception as exc:  # Don't fail job if suggestions fail
+            pass  # Log in production
         job_store.update_job(
             job_id,
             status=JobStatus.completed,

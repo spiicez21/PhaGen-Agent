@@ -108,6 +108,29 @@ The repo-level `requirements.txt` simply pulls in `backend/requirements.txt` and
 - **Local stack via Docker Compose**: from the repo root run `cd infra` followed by `docker compose up --build`. The compose file now focuses on optional services (MinIO, Ollama, rdkit-service, frontend/backend wiring); the operational database lives in Supabase, so you can skip the Postgres container entirely unless you need an offline fallback. Stop everything with `docker compose down` (add `-v` to prune volumes) or target individual services such as `docker compose up api frontend` during development.
 - **Continuous integration**: `.github/workflows/ci.yml` executes on every push/PR to `main`, installing Python + Node dependencies, running backend `pytest`, linting the frontend with `npm run lint`, and ensuring all Docker images build cleanly through `docker compose build`. Use it as the reference pipeline when extending Section 10’s test/image requirements.
 
+## Key Features
+
+### Production-Ready Infrastructure
+- **Horizontal Scaling**: Kubernetes manifests with HPA autoscaling (2-10 API replicas, 1-8 Celery workers)
+- **Distributed Processing**: Celery task queue with Redis broker for async job execution
+- **Caching Layer**: Redis caching with 2hr TTL (retrieval) and 24hr TTL (LLM responses)
+- **Connection Pooling**: pgBouncer with transaction-mode pooling (25 default, 100 max connections)
+- **Health Checks**: `/health`, `/ready`, `/metrics` endpoints for load balancer integration
+
+### Advanced ML & Analytics
+- **Disease Mapping**: Automatic repurposing suggestions based on evidence analysis (6 disease categories)
+- **Reranker Training**: Learns optimal evidence weights from user feedback (upvotes/downvotes)
+- **Custom Embeddings**: Fine-tune sentence-transformers on pharma-specific terminology
+- **Active Learning**: Feedback collection API (`POST /api/feedback`) drives continuous improvement
+
+### Security & Compliance
+- **Zero Data Retention (ZDR)**: Optional mode for pharma compliance
+- **Network Egress Controls**: Default-deny with allowlist validation
+- **Container Security**: Trivy scanning, Bandit SAST, Snyk dependency checks
+- **Audit Logging**: Immutable job/evidence access logs for regulatory compliance
+
+See `docs/ML_FEATURES.md` for ML implementation details and `IMPLEMENTATION_COMPLETE.md` for infrastructure setup.
+
 ## Architecture overview
 
 ```

@@ -140,10 +140,13 @@ The following remain as truly aspirational post-MVP features:
 
 ### Dependencies to Add
 
-Update `backend/requirements.txt`:
+Already added to `backend/requirements.txt`:
 ```
 redis>=5.0.0
 celery>=5.3.0
+numpy>=1.24.0
+sentence-transformers>=2.2.0  # Optional: for embedding training
+torch>=2.0.0                  # Optional: required by sentence-transformers
 ```
 
 ### Environment Variables
@@ -156,6 +159,42 @@ CELERY_BROKER_URL=redis://localhost:6379/1
 CELERY_RESULT_BACKEND=redis://localhost:6379/1
 ```
 
+### 🧠 Advanced ML & Analytics Features
+
+7. **Molecule-Disease Mapping** (`backend/app/ml/disease_mapper.py`)
+   - Predicts potential disease indications from evidence
+   - 6 pre-configured disease categories with MeSH IDs
+   - Automatic suggestions in job results (`repurposing_suggestions` field)
+   - Confidence scoring based on keyword matches
+
+8. **Reranker Fine-Tuning** (`backend/app/ml/reranker_trainer.py`)
+   - Learns optimal evidence weights from user feedback
+   - Gradient descent training on upvote/downvote signals
+   - Adjusts clinical/literature/patent/market weights
+   - CLI training: `python ml_cli.py reranker`
+
+9. **Custom Embedding Training** (`backend/app/ml/embedding_trainer.py`)
+   - Fine-tunes sentence-transformers on pharma terminology
+   - Contrastive learning with positive/negative pairs
+   - Export for Chroma integration
+   - CLI training: `python ml_cli.py embeddings --epochs 3`
+
+### ML Usage
+
+```bash
+# Show ML model stats
+python ml_cli.py stats
+
+# Train reranker from feedback (requires feedback in DB)
+python ml_cli.py reranker
+
+# Train custom embeddings (requires sentence-transformers)
+pip install sentence-transformers torch
+python ml_cli.py embeddings --epochs 5
+```
+
+See `docs/ML_FEATURES.md` for comprehensive ML documentation.
+
 ## Conclusion
 
 The project is now production-ready with:
@@ -166,5 +205,8 @@ The project is now production-ready with:
 - ✅ Database connection pooling
 - ✅ Active learning feedback collection
 - ✅ Cloud-native deployment manifests
+- ✅ Disease mapping for repurposing suggestions
+- ✅ Reranker fine-tuning from user feedback
+- ✅ Custom embedding training on pharma corpus
 
-All core stretch goals for infrastructure and scaling have been implemented!
+All core stretch goals for infrastructure, scaling, and advanced analytics have been implemented!

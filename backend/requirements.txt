@@ -11,3 +11,10 @@ onnxruntime==1.19.2
 SQLAlchemy==2.0.31
 psycopg[binary]==3.2.1
 boto3==1.35.26
+
+# ML/caching/task queue dependencies
+redis>=5.0.0
+celery>=5.3.0
+numpy>=1.24.0
+sentence-transformers>=2.2.0  # Optional: for custom embedding training
+torch>=2.0.0  # Optional: required by sentence-transformers

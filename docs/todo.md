@@ -138,9 +138,9 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - [ ] Air-gapped deployment mode with offline model bundles and pre-indexed datasets.
 
 #### Advanced Analytics & ML
-- [ ] Molecule–disease mapping model for proactive repurposing suggestions.
-- [ ] Reranker fine-tuning pipeline using historical job feedback for retrieval optimization.
-- [ ] Custom embedding model training on domain-specific pharma corpus.
+- [x] Molecule–disease mapping model for proactive repurposing suggestions (`backend/app/ml/disease_mapper.py` with MoleculeDiseaseMapper class, category-based prediction from clinical/literature evidence, integrated into job results via `repurposing_suggestions` field).
+- [x] Reranker fine-tuning pipeline using historical job feedback for retrieval optimization (`backend/app/ml/reranker_trainer.py` with gradient descent training on feedback scores, learns evidence type weights from upvotes/downvotes, CLI entry point `train_reranker_from_feedback`).
+- [x] Custom embedding model training on domain-specific pharma corpus (`backend/app/ml/embedding_trainer.py` with sentence-transformers fine-tuning, contrastive learning on pharma term pairs, export for Chroma integration).
 
 ## Notes & recommended priorities
 - Security is non-negotiable for pharma customers — prioritize VPC/Self-host, ZDR mode, RBAC, and audit logs early.
