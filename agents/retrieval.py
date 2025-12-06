@@ -42,15 +42,21 @@ class Retriever:
             from chromadb.utils.embedding_functions import (
                 SentenceTransformerEmbeddingFunction,
             )
-        except ImportError:
+        except (ImportError, OSError):
+            # ChromaDB or sentence-transformers not available (Windows DLL issues)
             return None
 
         if not self.index_path.exists():
             return None
 
-        embedding_fn = SentenceTransformerEmbeddingFunction(
-            model_name="all-MiniLM-L6-v2"
-        )
+        try:
+            embedding_fn = SentenceTransformerEmbeddingFunction(
+                model_name="all-MiniLM-L6-v2"
+            )
+        except (ImportError, OSError):
+            # PyTorch DLL loading failed on Windows
+            return None
+            
         client = chromadb.PersistentClient(path=str(self.index_path))
         try:
             return client.get_collection(

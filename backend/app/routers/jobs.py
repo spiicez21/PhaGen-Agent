@@ -9,7 +9,12 @@ from ..jobs import InMemoryJobStore, PostgresJobStore
 from ..reporting import generate_report_pdf
 from ..storage import store_report_pdf
 from ..schemas import JobCreateRequest, JobResponse, JobStatus
-from ..ml import generate_repurposing_suggestions
+
+try:
+    from ..ml import generate_repurposing_suggestions
+except (ImportError, OSError):
+    # ML features optional - may fail on Windows without proper PyTorch/CUDA setup
+    generate_repurposing_suggestions = None
 
 try:
     from agents.master import MasterAgent
@@ -68,13 +73,14 @@ def _run_job(job_id: str, payload: JobCreateRequest) -> None:
         serialized["report_version"] = version
         _ensure_structure_metadata(job_id, serialized)
         
-        # Generate repurposing suggestions
-        try:
-            suggestions = generate_repurposing_suggestions(job_id, serialized)
-            if suggestions:
-                serialized["repurposing_suggestions"] = suggestions
-        except Exception as exc:  # Don't fail job if suggestions fail
-            pass  # Log in production
+        # Generate repurposing suggestions (if ML features available)
+        if generate_repurposing_suggestions:
+            try:
+                suggestions = generate_repurposing_suggestions(job_id, serialized)
+                if suggestions:
+                    serialized["repurposing_suggestions"] = suggestions
+            except Exception as exc:  # Don't fail job if suggestions fail
+                pass  # Log in production
         job_store.update_job(
             job_id,
             status=JobStatus.completed,
