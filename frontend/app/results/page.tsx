@@ -15,6 +15,12 @@ export default function ResultsPage() {
     investigate: "bg-rose-100 text-rose-800"
   };
 
+  const apiBudgetTone: Record<string, string> = {
+    ok: "bg-emerald-100 text-emerald-800",
+    warning: "bg-amber-100 text-amber-800",
+    exceeded: "bg-rose-100 text-rose-800"
+  };
+
   return (
     <div className="section-stack">
       <section className="grid-two">
@@ -159,6 +165,102 @@ export default function ResultsPage() {
               </article>
             ))}
           </div>
+
+          {quality.story_checks && (
+            <div className="space-y-3 rounded-2xl border border-neutral-200 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="eyebrow">Story guardrail</p>
+                  <h3 className="text-lg font-semibold">Hallucination scan</h3>
+                </div>
+                <span
+                  className={`px-3 py-1 rounded-full text-sm font-semibold ${qualityStatusTone[quality.story_checks.status] ?? "bg-neutral-200 text-neutral-800"}`}
+                >
+                  {quality.story_checks.status === "pass"
+                    ? "Pass"
+                    : quality.story_checks.status === "needs_attention"
+                      ? "Needs attention"
+                      : "Investigate"}
+                </span>
+              </div>
+              <p className="subtle-text">
+                Every innovation-story sentence is compared against its cited evidence. Low lexical overlap or missing citations are flagged so reviewers can pause before sharing results.
+              </p>
+              {quality.story_checks.flagged_claims.length ? (
+                <ul className="space-y-3">
+                  {quality.story_checks.flagged_claims.map((claim) => (
+                    <li key={claim.claim_id} className="rounded-2xl border border-rose-200 bg-rose-50 p-3">
+                      <p className="text-sm font-semibold text-rose-900">{claim.claim_text}</p>
+                      <p className="text-sm text-rose-900">{claim.reason}</p>
+                      <p className="text-xs text-rose-800">
+                        Support score {(claim.support_score * 100).toFixed(0)}% · Evidence IDs {claim.evidence_ids.length ? claim.evidence_ids.join(", ") : "None"}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="rounded-2xl border border-emerald-100 bg-emerald-50 p-3 text-sm text-emerald-900">
+                  All innovation-story claims have citations with sufficient lexical overlap. No hallucination risk detected.
+                </p>
+              )}
+            </div>
+          )}
+
+          {quality.api_budgets && (
+            <div className="space-y-3 rounded-2xl border border-neutral-200 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="eyebrow">API budgets</p>
+                  <h3 className="text-lg font-semibold">NCBI & OpenFDA quotas</h3>
+                </div>
+                <span className="text-sm text-neutral-500">
+                  Live view of minute/day usage vs documented limits
+                </span>
+              </div>
+              <div className="grid-two">
+                {Object.entries(quality.api_budgets).map(([provider, budget]) => (
+                  <article key={provider} className="space-y-2 rounded-2xl border border-neutral-200 p-4">
+                    <header className="flex items-center justify-between">
+                      <span className="badge">{provider}</span>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs font-semibold ${apiBudgetTone[budget.status] ?? "bg-neutral-200 text-neutral-800"}`}
+                      >
+                        {budget.status === "ok"
+                          ? "Within budget"
+                          : budget.status === "warning"
+                            ? "Near limit"
+                            : "Exceeded"}
+                      </span>
+                    </header>
+                    <p className="text-sm text-neutral-600">{budget.label}</p>
+                    <dl className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <dt className="subtle-text">Minute window</dt>
+                        <dd className="font-semibold">
+                          {budget.minute_used}/{budget.per_minute_limit}
+                        </dd>
+                        <p className="text-xs text-neutral-500">
+                          Resets in {budget.reset_in_seconds.minute}s
+                        </p>
+                      </div>
+                      <div>
+                        <dt className="subtle-text">Day window</dt>
+                        <dd className="font-semibold">
+                          {budget.day_used}/{budget.per_day_limit}
+                        </dd>
+                        <p className="text-xs text-neutral-500">
+                          Resets in {Math.round(budget.reset_in_seconds.day / 3600)}h
+                        </p>
+                      </div>
+                    </dl>
+                    <p className="text-xs text-neutral-500">
+                      Last call {budget.last_call_at ?? "n/a"} · Lifetime {budget.lifetime_calls} requests
+                    </p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
       )}
 

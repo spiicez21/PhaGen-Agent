@@ -1,0 +1,59 @@
+{
+  "payload": {
+    "molecule": "Lenabasum",
+    "recommendation": "Investigate",
+    "market_score": 69,
+    "innovation_story": "Lenabasum's cannabinoid receptor agonism keeps delivering skin-score and flare reductions in dermatomyositis and systemic sclerosis pilots, with manageable tolerability and a differentiated MoA that merits a focused phase 3.",
+    "workers": {
+      "clinical": {
+        "summary": "Phase 2 dermatomyositis trial met the CDASI primary with sustained steroid sparing and no Grade 3 AEs.",
+        "confidence": 0.73,
+        "confidence_band": "medium",
+        "evidence": [
+          {
+            "type": "Trial",
+            "text": "CDASI improved by 10.4 points at week 16 vs 3.5 placebo with durable response through week 28.",
+            "url": "https://clinicaltrials.gov/study/NCT02466243",
+            "confidence": 0.7
+          },
+          {
+            "type": "Trial",
+            "text": "Systemic sclerosis OLE showed continued mRSS decline and stable lung function across 36 patients.",
+            "url": "https://clinicaltrials.gov/study/NCT02465437",
+            "confidence": 0.61
+          }
+        ]
+      },
+      "literature": {
+        "summary": "Peer-reviewed case series highlight CB2-mediated resolution of neutrophilic inflammation and reduced fibrosis markers.",
+        "confidence": 0.66,
+        "confidence_band": "medium",
+        "evidence": [
+          {
+            "type": "Mechanism",
+            "text": "CB2 agonism reduced IL-17 and TGF-beta signaling in fibroblast co-culture models.",
+            "url": "https://pubmed.ncbi.nlm.nih.gov/34711220/",
+            "confidence": 0.62
+          }
+        ]
+      },
+      "market": {
+        "summary": "Rare autoimmune dermatology market ~35k addressable patients with limited steroid-sparing options, TAM ~$0.8B.",
+        "confidence": 0.64,
+        "confidence_band": "medium",
+        "evidence": [
+          {
+            "type": "Market",
+            "text": "US/EU dermatomyositis prevalence of 14 per million translates to ~20k treatable adults; pricing analogues at $40k/yr.",
+            "url": "https://example.org/market/lenabasum",
+            "confidence": 0.6
+          }
+        ]
+      }
+    },
+    "quality": {
+      "status": "needs_attention",
+      "alerts": {}
+    }
+  }
+}

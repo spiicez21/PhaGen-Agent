@@ -7,7 +7,9 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeou
 from dataclasses import asdict
 from typing import Dict, List
 
+from .api_budget import api_budget_monitor, summarize_budget_status
 from .llm import LLMClient, LLMClientError, format_structured_context
+from .temperature import resolve_master_temperature, resolve_worker_temperatures
 from .models import (
     MasterResult,
     MasterRun,
@@ -43,6 +45,33 @@ class MasterAgent:
         "literature": 1,
         "market": 1,
     }
+    STORY_SUPPORT_THRESHOLD = 0.2
+    STORY_STOPWORDS = {
+        "the",
+        "and",
+        "with",
+        "from",
+        "that",
+        "this",
+        "have",
+        "has",
+        "will",
+        "into",
+        "than",
+        "once",
+        "when",
+        "over",
+        "after",
+        "more",
+        "less",
+        "such",
+        "also",
+        "upon",
+        "into",
+        "case",
+        "cases",
+        "data",
+    }
 
     def __init__(
         self,
@@ -52,16 +81,35 @@ class MasterAgent:
         synonym_expander: SynonymExpander | None = None,
         worker_timeouts: Dict[str, float] | None = None,
         worker_retry_budget: Dict[str, int] | None = None,
+        worker_temperatures: Dict[str, float] | None = None,
+        master_temperature: float | None = None,
     ) -> None:
         retriever = Retriever(top_k=top_k, context_tokens=context_tokens)
         self.context_tokens = context_tokens
         self.llm = llm_client or LLMClient()
         self.synonyms = synonym_expander or SynonymExpander()
+        self.worker_temperatures = resolve_worker_temperatures(worker_temperatures)
         self.workers = {
-            "clinical": ClinicalWorker(retriever, self.llm),
-            "patent": PatentWorker(retriever, self.llm),
-            "literature": LiteratureWorker(retriever, self.llm),
-            "market": MarketWorker(retriever, self.llm),
+            "clinical": ClinicalWorker(
+                retriever,
+                self.llm,
+                temperature=self.worker_temperatures.get("clinical"),
+            ),
+            "patent": PatentWorker(
+                retriever,
+                self.llm,
+                temperature=self.worker_temperatures.get("patent"),
+            ),
+            "literature": LiteratureWorker(
+                retriever,
+                self.llm,
+                temperature=self.worker_temperatures.get("literature"),
+            ),
+            "market": MarketWorker(
+                retriever,
+                self.llm,
+                temperature=self.worker_temperatures.get("market"),
+            ),
         }
         self.worker_timeouts = {
             **self.DEFAULT_WORKER_TIMEOUTS,
@@ -71,6 +119,7 @@ class MasterAgent:
             **self.DEFAULT_RETRY_BUDGET,
             **(worker_retry_budget or {}),
         }
+        self.master_temperature = resolve_master_temperature(master_temperature)
         self._logger = logging.getLogger(__name__)
 
     def run(
@@ -291,25 +340,26 @@ class MasterAgent:
             "Investigate: mixed or emerging signals requiring validation; "
             "No-Go: weak efficacy, blocking IP/regulatory risk, or limited market."  # noqa: E501
         )
+        # Use simpler prompt optimized for small models
         user_prompt = (
-            "You are the final reviewer who writes the Innovation Story and rubric-based recommendation.\n"
-            "Context:\n"
-            f"{format_structured_context(payload)}\n\n"
-            "Respond as minified JSON with keys innovation_story, recommendation, rationale."
-            " Recommendation must be one of Go, Investigate, No-Go per rubric: "
-            f"{rubric}"
+            f"Molecule: {molecule}\n"
+            f"Market score: {market_score}/10\n"
+            f"Clinical: {worker_outputs.get('clinical', WorkerResult()).summary[:150]}\n"
+            f"Patent: {worker_outputs.get('patent', WorkerResult()).summary[:150]}\n\n"
+            "Output valid JSON only (no markdown):\n"
+            "{\"innovation_story\": \"2-3 sentence story\", \"recommendation\": \"Go\", \"rationale\": \"brief reason\"}\n\n"
+            f"Recommendation must be: Go, Investigate, or No-Go based on: {rubric}"
         )
         try:
             raw = self.llm.generate(
                 prompt=user_prompt,
-                system_prompt=
-                "Synthesize cross-domain biotech diligence into a crisp Innovation Story and rubric-based recommendation.",
-                temperature=0.2,
-                max_tokens=400,
+                system_prompt="Return only valid JSON. No explanations or markdown.",
+                temperature=0.1,  # Lower temp for more reliable JSON
+                max_tokens=300,
             )
             parsed = self._parse_master_response(raw)
         except (LLMClientError, ValueError) as exc:  # pragma: no cover - runtime
-            self._logger.warning("Master synthesis fallback: %s", exc)
+            self._logger.debug("Master synthesis JSON parse failed: %s, using fallback", exc)
             return fallback_story, fallback_recommendation
 
         story = parsed.get("innovation_story") or fallback_story
@@ -346,12 +396,31 @@ class MasterAgent:
 
     def _parse_master_response(self, raw: str) -> dict:
         snippet = raw.strip()
+        # Try direct parse first
+        try:
+            return json.loads(snippet)
+        except json.JSONDecodeError:
+            pass
+        # Try extracting JSON from markdown code blocks
+        if "```json" in snippet:
+            start = snippet.find("```json") + 7
+            end = snippet.find("```", start)
+            if end > start:
+                snippet = snippet[start:end].strip()
+                try:
+                    return json.loads(snippet)
+                except json.JSONDecodeError:
+                    pass
+        # Try finding first { to last }
         start = snippet.find("{")
         end = snippet.rfind("}")
-        if start == -1 or end == -1 or end <= start:
-            raise ValueError("Master synthesis did not return JSON")
-        json_blob = snippet[start : end + 1]
-        return json.loads(json_blob)
+        if start != -1 and end != -1 and end > start:
+            json_blob = snippet[start : end + 1]
+            try:
+                return json.loads(json_blob)
+            except json.JSONDecodeError as e:
+                self._logger.debug(f"JSON parse failed: {e}, raw response: {raw[:200]}")
+        raise ValueError("Master synthesis did not return valid JSON")
 
     def _resolve_recommendation(
         self,
@@ -372,14 +441,24 @@ class MasterAgent:
     def serialize(self, result: MasterResult) -> dict:
         payload = asdict(result)
         workers: Dict[str, Dict[str, object]] = payload.get("workers", {})
-        worker_evidence_map = self._attach_evidence_ids(workers)
+        worker_evidence_map, evidence_catalog = self._attach_evidence_ids(workers)
         claim_links = self._link_story_claims(
             payload.get("innovation_story", ""),
             workers,
             worker_evidence_map,
         )
+        story_checks = self._detect_story_gaps(
+            payload.get("innovation_story", ""),
+            claim_links,
+            evidence_catalog,
+        )
+        api_budgets = api_budget_monitor.snapshot()
         payload["validation"] = self._build_validation_summary(claim_links)
-        payload["quality"] = self._build_quality_summary(worker_outputs=result.workers)
+        payload["quality"] = self._build_quality_summary(
+            worker_outputs=result.workers,
+            story_checks=story_checks,
+            api_budgets=api_budgets,
+        )
         payload["workers"] = workers
         return payload
 
@@ -432,8 +511,9 @@ class MasterAgent:
     # Validation helpers ----------------------------------------------
     def _attach_evidence_ids(
         self, workers: Dict[str, Dict[str, object]]
-    ) -> Dict[str, List[str]]:
+    ) -> tuple[Dict[str, List[str]], Dict[str, dict]]:
         worker_map: Dict[str, List[str]] = {}
+        catalog: Dict[str, dict] = {}
         for worker_name, data in workers.items():
             evidence_records = list(data.get("evidence", []) or [])
             enriched: List[dict] = []
@@ -444,9 +524,10 @@ class MasterAgent:
                 enriched_record["evidence_id"] = evidence_id
                 enriched.append(enriched_record)
                 evidence_ids.append(evidence_id)
+                catalog[evidence_id] = enriched_record
             data["evidence"] = enriched
             worker_map[worker_name] = evidence_ids
-        return worker_map
+        return worker_map, catalog
 
     def _link_story_claims(
         self,
@@ -508,7 +589,12 @@ class MasterAgent:
             "claim_links": claim_links,
         }
 
-    def _build_quality_summary(self, worker_outputs: Dict[str, WorkerResult]) -> dict:
+    def _build_quality_summary(
+        self,
+        worker_outputs: Dict[str, WorkerResult],
+        story_checks: dict | None = None,
+        api_budgets: dict | None = None,
+    ) -> dict:
         metrics: Dict[str, dict] = {}
         alerts: Dict[str, List[str]] = {}
         has_anomaly = False
@@ -521,8 +607,112 @@ class MasterAgent:
         status = "pass"
         if alerts:
             status = "investigate" if has_anomaly else "needs_attention"
-        return {
+        if story_checks:
+            status = self._max_quality_status(status, story_checks.get("status", "pass"))
+        if api_budgets:
+            budget_status = summarize_budget_status(api_budgets)
+            if budget_status:
+                status = self._max_quality_status(status, budget_status)
+        summary = {
             "status": status,
             "metrics": metrics,
             "alerts": alerts,
         }
+        if story_checks:
+            summary["story_checks"] = story_checks
+        if api_budgets:
+            summary["api_budgets"] = api_budgets
+        return summary
+
+    def _detect_story_gaps(
+        self,
+        story: str,
+        claim_links: List[dict],
+        evidence_catalog: Dict[str, dict],
+    ) -> dict:
+        flagged: List[dict] = []
+        total = len(claim_links)
+        if not (story or "").strip() or total == 0:
+            return {
+                "status": "pass",
+                "claims_total": total,
+                "claims_flagged": 0,
+                "citation_gap_ratio": 0.0,
+                "flagged_claims": [],
+            }
+        for claim in claim_links:
+            claim_text = claim.get("claim_text", "")
+            evidence_ids = claim.get("evidence_ids") or []
+            support_score = self._claim_support_score(claim_text, evidence_ids, evidence_catalog)
+            reasons: List[str] = []
+            if not evidence_ids:
+                reasons.append("No citations linked to claim")
+            if evidence_ids and support_score < self.STORY_SUPPORT_THRESHOLD:
+                reasons.append(f"Low lexical overlap ({support_score:.2f})")
+            has_numbers = any(ch.isdigit() for ch in claim_text)
+            evidence_texts = [
+                (evidence_catalog[e_id].get("text") or "")
+                for e_id in evidence_ids
+                if e_id in evidence_catalog
+            ]
+            if has_numbers and evidence_ids and evidence_texts and not any(
+                any(ch.isdigit() for ch in text) for text in evidence_texts
+            ):
+                reasons.append("Numeric claim lacks cited numbers")
+            if reasons:
+                flagged.append(
+                    {
+                        "claim_id": claim.get("claim_id"),
+                        "claim_text": claim_text,
+                        "reason": "; ".join(reasons),
+                        "support_score": round(support_score, 3),
+                        "evidence_ids": evidence_ids,
+                    }
+                )
+        flagged_count = len(flagged)
+        ratio = flagged_count / max(1, total)
+        if flagged_count == 0:
+            status = "pass"
+        elif ratio >= 0.4 or flagged_count >= 2:
+            status = "investigate"
+        else:
+            status = "needs_attention"
+        return {
+            "status": status,
+            "claims_total": total,
+            "claims_flagged": flagged_count,
+            "citation_gap_ratio": round(ratio, 3),
+            "flagged_claims": flagged,
+        }
+
+    def _claim_support_score(
+        self,
+        claim_text: str,
+        evidence_ids: List[str],
+        evidence_catalog: Dict[str, dict],
+    ) -> float:
+        claim_tokens = self._tokenize_text(claim_text)
+        if not claim_tokens:
+            return 0.0
+        evidence_tokens: set[str] = set()
+        for evidence_id in evidence_ids:
+            record = evidence_catalog.get(evidence_id) or {}
+            evidence_tokens.update(self._tokenize_text(record.get("text", "")))
+        if not evidence_tokens:
+            return 0.0
+        overlap = len(claim_tokens & evidence_tokens)
+        return overlap / max(1, len(claim_tokens))
+
+    def _tokenize_text(self, text: str) -> set[str]:
+        tokens = re.findall(r"[a-z0-9]+", (text or "").lower())
+        return {
+            token
+            for token in tokens
+            if len(token) >= 4 and token not in self.STORY_STOPWORDS
+        }
+
+    def _max_quality_status(self, left: str, right: str) -> str:
+        order = {"pass": 0, "needs_attention": 1, "investigate": 2}
+        left_rank = order.get(left, 0)
+        right_rank = order.get(right, 0)
+        return left if left_rank >= right_rank else right

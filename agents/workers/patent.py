@@ -10,8 +10,8 @@ from .base import Worker
 
 
 class PatentWorker(Worker):
-    def __init__(self, retriever, llm=None):
-        super().__init__("patent", retriever, llm)
+    def __init__(self, retriever, llm=None, temperature: float | None = None):
+        super().__init__("patent", retriever, llm, temperature=temperature)
 
     def run(self, request: WorkerRequest) -> WorkerResult:
         primary = self.retriever.search(

@@ -8,8 +8,8 @@ from .base import Worker
 
 
 class LiteratureWorker(Worker):
-    def __init__(self, retriever, llm=None):
-        super().__init__("literature", retriever, llm)
+    def __init__(self, retriever, llm=None, temperature: float | None = None):
+        super().__init__("literature", retriever, llm, temperature=temperature)
 
     def build_summary(self, request: WorkerRequest, passages: List[dict]) -> WorkerResult:
         articles = self._extract_articles(passages)

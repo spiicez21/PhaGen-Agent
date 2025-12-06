@@ -188,8 +188,45 @@ export interface WorkerQualityMetrics {
 
 export type QualityStatus = "pass" | "needs_attention" | "investigate";
 
+export interface StoryQualityFlag {
+  claim_id: string;
+  claim_text: string;
+  reason: string;
+  support_score: number;
+  evidence_ids: string[];
+}
+
+export interface StoryQualitySummary {
+  status: QualityStatus;
+  claims_total: number;
+  claims_flagged: number;
+  citation_gap_ratio: number;
+  flagged_claims: StoryQualityFlag[];
+}
+
+export type BudgetHealth = "ok" | "warning" | "exceeded";
+
+export interface ApiBudgetSnapshot {
+  label: string;
+  per_minute_limit: number;
+  per_day_limit: number;
+  minute_used: number;
+  minute_remaining: number;
+  day_used: number;
+  day_remaining: number;
+  status: BudgetHealth;
+  last_call_at?: string | null;
+  reset_in_seconds: {
+    minute: number;
+    day: number;
+  };
+  lifetime_calls: number;
+}
+
 export interface QualitySummary {
   status: QualityStatus;
   metrics: Record<string, WorkerQualityMetrics>;
   alerts: Record<string, string[]>;
+  story_checks?: StoryQualitySummary;
+  api_budgets?: Record<string, ApiBudgetSnapshot>;
 }

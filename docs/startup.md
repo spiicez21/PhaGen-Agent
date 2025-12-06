@@ -16,21 +16,29 @@ Fast way to spin up every moving part (database, backend API, frontend UI) on a 
    Set-Location D:\PhaGen-Agent\frontend
    npm install
    ```
-3. **Docker Desktop** running locally so `docker compose` can start Postgres (and optional MinIO/Ollama/etc.).
+3. **Supabase project + connection string**. Grab the `psycopg` URI from **Supabase → Project Settings → Database → Connection string** and paste it into `.env` as `SUPABASE_URL=postgresql://...`.
+
+Docker Desktop is optional—install it only if you plan to run the ancillary services in `infra/docker-compose.yml` (MinIO, rdkit-service, etc.).
 
 Re-activate the virtualenv in every new shell with `& D:/PhaGen-Agent/.venv/Scripts/Activate.ps1`.
 
-## 2. Start the database (Postgres via Docker)
+## 2. Configure the database (Supabase first)
 
-```powershell
-Set-Location D:\PhaGen-Agent\infra
-$env:COMPOSE_PROJECT_NAME = "phagen"
-docker compose up postgres -d
-```
+1. Edit `.env` in the repo root and make sure the `SUPABASE_URL` line contains your hosted Postgres URI:
+   ```dotenv
+   SUPABASE_URL=postgresql://<user>:<password>@<host>:5432/postgres
+   ```
+2. (Optional) Export it inline if you need to override during experiments:
+   ```powershell
+   $env:SUPABASE_URL = "postgresql://..."
+   ```
+3. Test the connection quickly (optional):
+   ```powershell
+   $env:SUPABASE_URL = (Get-Content .\.env | Select-String -Pattern '^SUPABASE_URL=').Line.Split('=', 2)[1].Trim()
+   python -c "import os, psycopg; psycopg.connect(os.environ['SUPABASE_URL']).close(); print('Supabase reachable ✅')"
+   ```
 
-- Wait for the `postgres` container to report `healthy`. Check logs with `docker compose logs -f postgres`.
-- When finished for the day: `docker compose down postgres` (still from `infra/`).
-- If Docker is unavailable, point the backend at SQLite (`DATABASE_URL=sqlite:///./phagen.db`) and skip this section.
+If Supabase is unavailable, point the backend at SQLite temporarily with `DATABASE_URL=sqlite:///./phagen.db`.
 
 ## 3. Start the backend API (FastAPI + Uvicorn)
 
@@ -39,13 +47,13 @@ Set-Location D:\PhaGen-Agent
 & .venv\Scripts\Activate.ps1
 Set-Location .\backend
 $env:STRUCTURE_CATALOG_PATH = "D:\PhaGen-Agent\indexes\data\structures\structures.manifest.json"
-$env:DATABASE_URL = "postgresql+psycopg://phagen:phagen@localhost:5432/phagen"  # swap for sqlite:///./phagen.db when Postgres is offline
 $env:STORAGE_PROVIDER = "none"  # optional: keep uploads local during dev
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 Notes:
 - The backend reads `.env` values automatically; export env vars inline when experimenting.
+- To point the API at hosted Supabase, set `SUPABASE_URL` (or `DATABASE_URL`) to your Supabase connection string—the backend will pick up whichever is present.
 - `STRUCTURE_CATALOG_PATH` should point at the latest manifest created by `indexes/build_index.py`.
 - If you need MinIO/S3, set `S3_*` env vars before running uvicorn.
 

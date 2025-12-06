@@ -80,7 +80,7 @@ def _put_object(*, bucket: str, key: str, body: bytes, content_type: str) -> str
         )
         return f"s3://{bucket}/{key}"
     except (BotoCoreError, ClientError, ValueError) as exc:  # pragma: no cover
-        _logger.error("Failed to upload %s: %s", key, exc)
+        _logger.warning("Failed to upload %s: %s (S3 storage is optional)", key, exc)
         return None
 
 

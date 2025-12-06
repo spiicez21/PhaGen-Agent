@@ -1,0 +1,10 @@
+{
+  "image_id": "Pirfenidone-b0ab8558",
+  "asset_path": "D:\\PhaGen-Agent\\backend\\app\\report_assets\\reports\\images\\structures\\Pirfenidone-b0ab8558.svg",
+  "source_type": "smiles",
+  "source_reference": "C12CCC(CC1)C(C2)OC(=O)C(N)=O",
+  "smiles": "C12CCC(CC1)C(C2)OC(=O)C(N)=O",
+  "inchi": "",
+  "generated_at": "2025-12-06T04:46:07.454388+00:00",
+  "license": "internal-use-only"
+}

@@ -1,0 +1,77 @@
+[
+  {
+    "id": "pirfenidone",
+    "molecule": "Pirfenidone",
+    "synonyms": ["Esbriet", "PFD"],
+    "smiles": "O=C1NC(=O)N(C)C(=O)N1C",
+    "fixture": "fixtures/pirfenidone.json",
+    "expectations": {
+      "recommendation": "Investigate",
+      "market_score": { "min": 70, "max": 80 },
+      "quality_status": ["needs_attention", "pass"],
+      "min_workers": ["clinical", "literature", "patent", "market"],
+      "min_evidence": { "clinical": 2, "literature": 1, "patent": 1, "market": 1 },
+      "story_min_words": 25
+    }
+  },
+  {
+    "id": "metformin",
+    "molecule": "Metformin",
+    "synonyms": ["Glucophage"],
+    "smiles": "CN(C)C(=N)N=C(N)N",
+    "fixture": "fixtures/metformin.json",
+    "expectations": {
+      "recommendation": "Monitor",
+      "market_score": { "min": 58, "max": 65 },
+      "quality_status": ["investigate"],
+      "min_workers": ["clinical", "literature", "patent", "market"],
+      "min_evidence": { "clinical": 1, "literature": 1 },
+      "story_min_words": 20
+    }
+  },
+  {
+    "id": "nintedanib",
+    "molecule": "Nintedanib",
+    "synonyms": ["Ofev"],
+    "smiles": "COC(=O)C1=CC2=C(NC=C2/C(=N/C3=CC(N(C)C(=O)CN4CCN(CC4)C)=CC=C3)C5=CC=CC=C5)C=C1O",
+    "fixture": "fixtures/nintedanib.json",
+    "expectations": {
+      "recommendation": "No-Go",
+      "market_score": { "min": 40, "max": 55 },
+      "quality_status": ["investigate", "needs_attention"],
+      "min_workers": ["clinical", "patent"],
+      "min_evidence": { "clinical": 1, "patent": 1 },
+      "story_min_words": 18
+    }
+  },
+  {
+    "id": "lenabasum",
+    "molecule": "Lenabasum",
+    "synonyms": ["Anabasum"],
+    "smiles": "CC(C)=CCC1=CC(=O)OC2=C1C(=O)C(OC2(C)C)=C(C)C",
+    "fixture": "fixtures/lenabasum.json",
+    "expectations": {
+      "recommendation": "Investigate",
+      "market_score": { "min": 65, "max": 75 },
+      "quality_status": ["needs_attention", "pass"],
+      "min_workers": ["clinical", "literature", "market"],
+      "min_evidence": { "clinical": 2, "literature": 1 },
+      "story_min_words": 22
+    }
+  },
+  {
+    "id": "pamrevlumab",
+    "molecule": "Pamrevlumab",
+    "synonyms": ["FG-3019"],
+    "smiles": "",
+    "fixture": "fixtures/pamrevlumab.json",
+    "expectations": {
+      "recommendation": "Go",
+      "market_score": { "min": 78, "max": 85 },
+      "quality_status": ["pass"],
+      "min_workers": ["clinical", "literature", "market"],
+      "min_evidence": { "clinical": 2, "literature": 1, "market": 1 },
+      "story_min_words": 28
+    }
+  }
+]

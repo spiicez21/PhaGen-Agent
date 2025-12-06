@@ -5,9 +5,11 @@ import logging
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
+from ..api_budget import API_PROVIDER_FOR_WORKER, api_budget_monitor
 from ..llm import LLMClient, LLMClientError, format_structured_context
 from ..models import EvidenceItem, WorkerRequest, WorkerResult
 from ..retrieval import Retriever
+from ..temperature import resolve_worker_temperature
 
 
 logger = logging.getLogger(__name__)
@@ -34,10 +36,12 @@ class Worker(ABC):
         name: str,
         retriever: Retriever,
         llm_client: Optional[LLMClient] = None,
+        temperature: float | None = None,
     ) -> None:
         self.name = name
         self.retriever = retriever
         self.llm = llm_client
+        self.temperature = resolve_worker_temperature(name, temperature)
 
     @abstractmethod
     def build_summary(self, request: WorkerRequest, passages: List[dict]) -> WorkerResult:
@@ -49,6 +53,7 @@ class Worker(ABC):
         gathered: List[dict] = []
         seen_ids: set[str] = set()
         for term in queries:
+            self._record_api_budget()
             results = self.retriever.search(
                 query=term,
                 source_type=self.name,
@@ -67,6 +72,7 @@ class Worker(ABC):
                 break
 
         if not gathered:
+            self._record_api_budget()
             gathered = self.retriever.search(
                 query=request.molecule,
                 source_type=self.name,
@@ -106,11 +112,21 @@ class Worker(ABC):
             EvidenceItem(
                 type=passage.get("source_type", default_type),
                 text=passage.get("snippet", ""),
-                url=passage.get("url", ""),
+                url=self._format_evidence_url(passage, default_type),
                 confidence=max(0.4, 1 - (idx * 0.1)),
             )
             for idx, passage in enumerate(passages)
         ]
+    
+    def _format_evidence_url(self, passage: dict, source_type: str) -> str:
+        """Format evidence URL with descriptive placeholder if missing."""
+        url = passage.get("url", "").strip()
+        if url and url != "https://example.org/evidence":
+            return url
+        # Generate descriptive source reference
+        doc_id = passage.get("id", "unknown")
+        origin = passage.get("origin", "indexed")
+        return f"source://{source_type}/{origin}/{doc_id}"
 
     # Quality metrics & guardrails ---------------------------------
     def _compute_metrics(
@@ -181,6 +197,11 @@ class Worker(ABC):
             alerts.append("Evidence monoculture (single unique source)")
         return alerts
 
+    def _record_api_budget(self) -> None:
+        provider = API_PROVIDER_FOR_WORKER.get(self.name)
+        if provider:
+            api_budget_monitor.record(provider)
+
     # LLM helpers ----------------------------------------------------
     def _format_passages(self, passages: List[dict], limit: int = 5) -> str:
         formatted: List[str] = []
@@ -221,7 +242,7 @@ class Worker(ABC):
                 prompt=user_prompt,
                 system_prompt=
                 "You are an expert analyst in a multi-agent molecule repurposing pipeline.",
-                temperature=0.15,
+                temperature=self.temperature,
                 max_tokens=280,
             )
         except LLMClientError as exc:  # pragma: no cover - runtime dependency

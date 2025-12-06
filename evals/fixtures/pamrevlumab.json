@@ -1,0 +1,59 @@
+{
+  "payload": {
+    "molecule": "Pamrevlumab",
+    "recommendation": "Go",
+    "market_score": 82,
+    "innovation_story": "Pamrevlumab combines statistically meaningful FVC preservation with biomarker-driven patient selection in PF-ILD, and partner-ready manufacturing plus orphan pricing elevate it to a Go call.",
+    "workers": {
+      "clinical": {
+        "summary": "Phase 3 ZEPHYRUS-1 hit its primary with 128 mL FVC benefit and clean safety profile.",
+        "confidence": 0.81,
+        "confidence_band": "high",
+        "evidence": [
+          {
+            "type": "Trial",
+            "text": "Pamrevlumab arm lost 260 mL vs 388 mL placebo over 48 weeks (p=0.01).",
+            "url": "https://clinicaltrials.gov/study/NCT03955146",
+            "confidence": 0.83
+          },
+          {
+            "type": "Trial",
+            "text": "Open-label extension maintained lung function with no new safety findings.",
+            "url": "https://example.org/trial/ole",
+            "confidence": 0.74
+          }
+        ]
+      },
+      "literature": {
+        "summary": "Multiple journals confirm CTGF inhibition reduces fibroblast proliferation and collagen deposition in PF-ILD models.",
+        "confidence": 0.77,
+        "confidence_band": "high",
+        "evidence": [
+          {
+            "type": "Mechanism",
+            "text": "CTGF neutralization cut hydroxyproline content by 37% in bleomycin mice.",
+            "url": "https://pubmed.ncbi.nlm.nih.gov/35111290/",
+            "confidence": 0.75
+          }
+        ]
+      },
+      "market": {
+        "summary": "Premium orphan pricing with 45k PF-ILD patients and limited head-to-head competition drives >$1.6B TAM.",
+        "confidence": 0.72,
+        "confidence_band": "high",
+        "evidence": [
+          {
+            "type": "Market",
+            "text": "KOL panel expects 35% adoption within 3 years given combination potential with nintedanib.",
+            "url": "https://example.org/market/pamrevlumab",
+            "confidence": 0.7
+          }
+        ]
+      }
+    },
+    "quality": {
+      "status": "pass",
+      "alerts": {}
+    }
+  }
+}

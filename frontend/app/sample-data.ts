@@ -221,6 +221,55 @@ export const SAMPLE_PAYLOAD: MasterPayload = {
         "Low evidence coverage (1/2)",
         "Evidence monoculture (single unique source)"
       ]
+    },
+    story_checks: {
+      status: "needs_attention",
+      claims_total: 3,
+      claims_flagged: 1,
+      citation_gap_ratio: 0.333,
+      flagged_claims: [
+        {
+          claim_id: "claim-2",
+          claim_text: "Mechanism-of-action literature reinforces TGF-beta modulation for broader label expansion.",
+          reason: "Low lexical overlap (0.18)",
+          support_score: 0.18,
+          evidence_ids: ["literature-1"]
+        }
+      ]
+    },
+    api_budgets: {
+      ncbi: {
+        label: "NCBI E-utilities",
+        per_minute_limit: 180,
+        per_day_limit: 10000,
+        minute_used: 64,
+        minute_remaining: 116,
+        day_used: 540,
+        day_remaining: 9460,
+        status: "warning",
+        last_call_at: "2025-12-05T09:55:00Z",
+        reset_in_seconds: {
+          minute: 12,
+          day: 14400
+        },
+        lifetime_calls: 18420
+      },
+      openfda: {
+        label: "OpenFDA",
+        per_minute_limit: 240,
+        per_day_limit: 5000,
+        minute_used: 32,
+        minute_remaining: 208,
+        day_used: 220,
+        day_remaining: 4780,
+        status: "ok",
+        last_call_at: "2025-12-05T09:40:00Z",
+        reset_in_seconds: {
+          minute: 8,
+          day: 21600
+        },
+        lifetime_calls: 8120
+      }
     }
   },
   validation: {
@@ -448,6 +497,55 @@ export const METFORMIN_PAYLOAD: MasterPayload = {
       clinical: ["Low evidence coverage (1/2)", "Evidence monoculture (single unique source)"],
       patent: ["Low precision proxy (0.44 < 0.50)"],
       market: ["Low precision proxy (0.48 < 0.50)"]
+    },
+    story_checks: {
+      status: "investigate",
+      claims_total: 2,
+      claims_flagged: 1,
+      citation_gap_ratio: 0.5,
+      flagged_claims: [
+        {
+          claim_id: "claim-2",
+          claim_text: "Commercial upside depends on payer acceptance of metabolic-fibrosis surrogates.",
+          reason: "No citations linked to claim",
+          support_score: 0,
+          evidence_ids: []
+        }
+      ]
+    },
+    api_budgets: {
+      ncbi: {
+        label: "NCBI E-utilities",
+        per_minute_limit: 180,
+        per_day_limit: 10000,
+        minute_used: 15,
+        minute_remaining: 165,
+        day_used: 120,
+        day_remaining: 9880,
+        status: "ok",
+        last_call_at: "2025-12-04T19:05:00Z",
+        reset_in_seconds: {
+          minute: 20,
+          day: 3600
+        },
+        lifetime_calls: 12800
+      },
+      openfda: {
+        label: "OpenFDA",
+        per_minute_limit: 240,
+        per_day_limit: 5000,
+        minute_used: 68,
+        minute_remaining: 172,
+        day_used: 480,
+        day_remaining: 4520,
+        status: "warning",
+        last_call_at: "2025-12-04T19:04:00Z",
+        reset_in_seconds: {
+          minute: 5,
+          day: 9000
+        },
+        lifetime_calls: 6120
+      }
     }
   },
   validation: {

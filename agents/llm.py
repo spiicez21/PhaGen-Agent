@@ -3,9 +3,15 @@ from __future__ import annotations
 import json
 import logging
 import os
+from pathlib import Path
 from typing import Optional
 
 import httpx
+from dotenv import load_dotenv
+
+# Load .env from repo root, overriding system environment variables
+_env_path = Path(__file__).resolve().parents[1] / ".env"
+load_dotenv(_env_path, override=True)
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +39,7 @@ class LLMClient:
         self.base_url = base_url or os.getenv("LLM_BASE_URL", default_base)
         self.api_key = api_key or os.getenv("LLM_API_KEY")
         self.timeout = timeout
+        logger.info(f"LLMClient initialized: provider={self.provider}, model={self.model}, base_url={self.base_url}")
 
     def generate(
         self,
@@ -85,6 +92,7 @@ class LLMClient:
             },
         }
         try:
+            logger.debug(f"Sending Ollama request to {url} with model={self.model}")
             response = httpx.post(url, json=payload, timeout=self.timeout)
             response.raise_for_status()
             data = response.json()
@@ -94,7 +102,13 @@ class LLMClient:
             if "response" in data:
                 return str(data["response"]).strip()
         except httpx.HTTPError as exc:
-            raise LLMClientError("Ollama request failed") from exc
+            error_detail = ""
+            try:
+                error_detail = f" - {exc.response.text}" if hasattr(exc, 'response') else ""
+            except:
+                pass
+            logger.error(f"Ollama request failed: {exc}{error_detail}")
+            raise LLMClientError(f"Ollama request failed: {exc}{error_detail}") from exc
         raise LLMClientError("Ollama returned an empty response")
 
     def _generate_with_openai(

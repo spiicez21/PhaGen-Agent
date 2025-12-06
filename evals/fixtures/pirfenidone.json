@@ -1,0 +1,77 @@
+{
+  "payload": {
+    "molecule": "Pirfenidone",
+    "recommendation": "Investigate",
+    "market_score": 72,
+    "innovation_story": "Pirfenidone maintains a consistent anti-fibrotic signal across PF-ILD cohorts with manageable liver monitoring, opening a viable path for label expansion once follow-up registrational data matures.",
+    "workers": {
+      "clinical": {
+        "summary": "Phase 2b study NCT01907900 slowed FVC decline by ~45 mL vs placebo over 24 weeks; benefit also seen in registry patients failing nintedanib.",
+        "confidence": 0.78,
+        "confidence_band": "high",
+        "evidence": [
+          {
+            "type": "Trial",
+            "text": "Pirfenidone slowed the decline in forced vital capacity versus placebo across progressive fibrosing interstitial lung disease patients.",
+            "url": "https://clinicaltrials.gov/study/NCT01907900",
+            "confidence": 0.84
+          },
+          {
+            "type": "Registry",
+            "text": "Real-world compassionate use program reported stabilised FVC over 6 months in refractory IPF cases.",
+            "url": "https://example.org/registry",
+            "confidence": 0.6
+          }
+        ]
+      },
+      "literature": {
+        "summary": "Multiple PMC articles describe TGF-beta modulation and anti-inflammatory properties supporting use beyond IPF.",
+        "confidence": 0.74,
+        "confidence_band": "medium",
+        "evidence": [
+          {
+            "type": "Mechanism",
+            "text": "Pirfenidone downregulates profibrotic cytokines and reduces collagen deposition in murine bleomycin models.",
+            "url": "https://pubmed.ncbi.nlm.nih.gov/33411160/",
+            "confidence": 0.72
+          }
+        ]
+      },
+      "patent": {
+        "summary": "Key Genentech filings on pirfenidone combinations expire 2028-2030; no blocking claims on PF-ILD indication found.",
+        "confidence": 0.63,
+        "confidence_band": "medium",
+        "evidence": [
+          {
+            "type": "Patent",
+            "text": "US20190234567 lists pirfenidone + nintedanib combos but indication claims are limited to IPF.",
+            "url": "https://patents.google.com/patent/US20190234567",
+            "confidence": 0.58
+          }
+        ]
+      },
+      "market": {
+        "summary": "~120k PF-ILD patients across US/EU with limited options; opportunity >$1.4B with modest uptake from pulmonologists.",
+        "confidence": 0.69,
+        "confidence_band": "medium",
+        "evidence": [
+          {
+            "type": "Market",
+            "text": "IQVIA analogue sizing suggests $1.4B PF-ILD TAM by 2030 with 6% CAGR.",
+            "url": "https://example.org/market",
+            "confidence": 0.65
+          }
+        ]
+      }
+    },
+    "quality": {
+      "status": "needs_attention",
+      "alerts": {
+        "literature": [
+          "Low evidence coverage (1/2)",
+          "Evidence monoculture (single unique source)"
+        ]
+      }
+    }
+  }
+}
