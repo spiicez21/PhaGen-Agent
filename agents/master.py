@@ -128,7 +128,7 @@ class MasterAgent:
         synonyms: list[str] | None = None,
         smiles: str | None = None,
     ) -> MasterRun:
-        self._logger.info(f"🚀 Starting agent analysis for molecule: {molecule}")
+        self._logger.info(f"[START] Agent analysis for molecule: {molecule}")
         self._logger.info(f"   Provided synonyms: {synonyms or 'None'}")
         self._logger.info(f"   SMILES: {smiles or 'Not provided'}")
         
@@ -147,15 +147,15 @@ class MasterAgent:
         )
         worker_outputs: Dict[str, WorkerResult] = {}
         failures: list[WorkerFailure] = []
-        self._logger.info(f"\n📋 Executing {len(self.workers)} workers: {list(self.workers.keys())}")
+        self._logger.info(f"\n[WORKERS] Executing {len(self.workers)} workers: {list(self.workers.keys())}")
         
         for name, worker in self.workers.items():
             try:
-                self._logger.info(f"   ⚙️  Running {name} worker...")
+                self._logger.info(f"   [RUN] Running {name} worker...")
                 worker_outputs[name] = self._run_with_retries(name, worker, request)
-                self._logger.info(f"   ✅ {name} worker completed (confidence: {worker_outputs[name].confidence:.2f})")
+                self._logger.info(f"   [OK] {name} worker completed (confidence: {worker_outputs[name].confidence:.2f})")
             except Exception as exc:  # pragma: no cover - placeholder
-                self._logger.error(f"   ❌ {name} worker failed: {str(exc)}")
+                self._logger.error(f"   [FAIL] {name} worker failed: {str(exc)}")
                 failures.append(WorkerFailure(worker_name=name, reason=str(exc)))
         if failures:
             return MasterRun(
@@ -165,13 +165,13 @@ class MasterAgent:
         market_score = int(
             float(worker_outputs["market"].metadata.get("market_score", "70"))
         )
-        self._logger.info(f"\n🎯 Market score: {market_score}")
+        self._logger.info(f"\n[SCORE] Market score: {market_score}")
         
-        self._logger.info("\n🔄 Generating fallback story and recommendation...")
+        self._logger.info("\n[FALLBACK] Generating fallback story and recommendation...")
         fallback_story = self._fallback_story(molecule, worker_outputs)
         fallback_recommendation = self._recommend(market_score, worker_outputs)
         
-        self._logger.info("\n🧠 Synthesizing final innovation story and recommendation...")
+        self._logger.info("\n[SYNTHESIS] Synthesizing final innovation story and recommendation...")
         innovation_story, recommendation = self._synthesize_story_and_recommendation(
             molecule,
             worker_outputs,
@@ -180,7 +180,7 @@ class MasterAgent:
             fallback_recommendation,
         )
         self._logger.info(f"   Final recommendation: {recommendation}")
-        self._logger.info(f"\n✅ Agent analysis completed successfully for {molecule}")
+        self._logger.info(f"\n[COMPLETE] Agent analysis completed successfully for {molecule}")
         self._logger.info(f"   Story length: {len(innovation_story)} chars")
         self._logger.info(f"   Workers completed: {len(worker_outputs)}/{len(self.workers)}\n")
         
@@ -361,11 +361,13 @@ class MasterAgent:
             "No-Go: weak efficacy, blocking IP/regulatory risk, or limited market."  # noqa: E501
         )
         # Use simpler prompt optimized for small models
+        clinical_summary = worker_outputs.get('clinical').summary[:150] if 'clinical' in worker_outputs else 'N/A'
+        patent_summary = worker_outputs.get('patent').summary[:150] if 'patent' in worker_outputs else 'N/A'
         user_prompt = (
             f"Molecule: {molecule}\n"
             f"Market score: {market_score}/10\n"
-            f"Clinical: {worker_outputs.get('clinical', WorkerResult()).summary[:150]}\n"
-            f"Patent: {worker_outputs.get('patent', WorkerResult()).summary[:150]}\n\n"
+            f"Clinical: {clinical_summary}\n"
+            f"Patent: {patent_summary}\n\n"
             "Output valid JSON only (no markdown):\n"
             "{\"innovation_story\": \"2-3 sentence story\", \"recommendation\": \"Go\", \"rationale\": \"brief reason\"}\n\n"
             f"Recommendation must be: Go, Investigate, or No-Go based on: {rubric}"

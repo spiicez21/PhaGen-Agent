@@ -40,56 +40,61 @@ Enhanced job execution visibility:
 ## Log Format
 
 ```
-2025-12-06 14:11:15,261 - agents.master - INFO - 🚀 Starting agent analysis for molecule: Nintedanib
+2025-12-06 14:11:15,261 - agents.master - INFO - [START] Agent analysis for molecule: Nintedanib
 2025-12-06 14:11:15,262 - agents.master - INFO -    Provided synonyms: ['BIBF 1120']
 2025-12-06 14:11:15,263 - agents.master - INFO -    SMILES: COC(=O)c1ccc(c(c1)NC(=O)c2ccc(cc2)CN3CCN(CC3)C)Nc4nc5ccccc5c(n4)C
 2025-12-06 14:11:15,264 - agents.master - INFO -    Expanded synonyms: ['Nintedanib', 'BIBF 1120', 'Ofev']
 
 2025-12-06 14:11:15,265 - agents.master - INFO - 
-📋 Executing 4 workers: ['clinical', 'patent', 'literature', 'market']
+[WORKERS] Executing 4 workers: ['clinical', 'patent', 'literature', 'market']
 
-2025-12-06 14:11:15,266 - agents.master - INFO -    ⚙️  Running clinical worker...
-2025-12-06 14:11:15,267 - agents.workers.base - INFO -       🔍 [clinical] Building search queries for: Nintedanib
-2025-12-06 14:11:15,268 - agents.workers.base - INFO -       🔍 [clinical] Generated 3 search queries
-2025-12-06 14:11:16,789 - agents.workers.base - INFO -       📋 [clinical] Retrieved 10 passages from knowledge base
-2025-12-06 14:11:16,790 - agents.workers.base - INFO -       🧠 [clinical] Generating summary with LLM...
-2025-12-06 14:11:18,234 - agents.workers.base - INFO -       ✅ [clinical] Summary complete (confidence: 0.85)
-2025-12-06 14:11:18,235 - agents.master - INFO -    ✅ clinical worker completed (confidence: 0.85)
+2025-12-06 14:11:15,266 - agents.master - INFO -    [RUN] Running clinical worker...
+2025-12-06 14:11:15,267 - agents.workers.base - INFO -       [QUERY] [clinical] Building search queries for: Nintedanib
+2025-12-06 14:11:15,268 - agents.workers.base - INFO -       [QUERY] [clinical] Generated 3 search queries
+2025-12-06 14:11:16,789 - agents.workers.base - INFO -       [RETRIEVAL] [clinical] Retrieved 10 passages from knowledge base
+2025-12-06 14:11:16,790 - agents.workers.base - INFO -       [LLM] [clinical] Generating summary with LLM...
+2025-12-06 14:11:18,234 - agents.workers.base - INFO -       [OK] [clinical] Summary complete (confidence: 0.85)
+2025-12-06 14:11:18,235 - agents.master - INFO -    [OK] clinical worker completed (confidence: 0.85)
 
 [... similar logs for other workers ...]
 
 2025-12-06 14:11:45,123 - agents.master - INFO - 
-🎯 Market score: 75
+[SCORE] Market score: 75
 
 2025-12-06 14:11:45,124 - agents.master - INFO - 
-🔄 Generating fallback story and recommendation...
+[FALLBACK] Generating fallback story and recommendation...
 
 2025-12-06 14:11:45,125 - agents.master - INFO - 
-🧠 Synthesizing final innovation story and recommendation...
+[SYNTHESIS] Synthesizing final innovation story and recommendation...
 2025-12-06 14:11:47,456 - agents.master - INFO -    Final recommendation: Approved
 
 2025-12-06 14:11:47,457 - agents.master - INFO - 
-✅ Agent analysis completed successfully for Nintedanib
+[COMPLETE] Agent analysis completed successfully for Nintedanib
 2025-12-06 14:11:47,458 - agents.master - INFO -    Story length: 2847 chars
 2025-12-06 14:11:47,459 - agents.master - INFO -    Workers completed: 4/4
 
 ================================================================================
-✅ Job abc123 completed successfully
+[SUCCESS] Job abc123 completed successfully
    Recommendation: Approved
    Report version: v1
 ================================================================================
 ```
 
-## Log Symbols
-- 🚀 Job/agent start
-- 📋 List/collection operations
-- 🔍 Search/query operations
-- 🔄 Retry/fallback operations
-- ⚙️ Processing/running
-- 🧠 LLM/synthesis operations
-- 🎯 Scoring/evaluation
-- ✅ Success/completion
-- ❌ Error/failure
+## Log Tags
+- `[START]` - Job/agent start
+- `[WORKERS]` - List/collection operations
+- `[RUN]` - Worker execution start
+- `[QUERY]` - Search/query building
+- `[RETRIEVAL]` - Knowledge base retrieval
+- `[FALLBACK]` - Retry/fallback operations
+- `[LLM]` - LLM/synthesis operations
+- `[SCORE]` - Scoring/evaluation
+- `[SYNTHESIS]` - Final story synthesis
+- `[OK]` - Success/completion
+- `[COMPLETE]` - Overall completion
+- `[SUCCESS]` - Job success
+- `[ERROR]` - Error/failure
+- `[FAIL]` - Worker failure
 
 ## Benefits
 

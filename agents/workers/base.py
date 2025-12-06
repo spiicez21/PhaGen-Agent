@@ -100,11 +100,11 @@ class Worker(ABC):
 
     def run(self, request: WorkerRequest) -> WorkerResult:
         sla = WorkerSLAMetrics(self.name)
-        logger.info(f"      \ud83d\udd0d [{self.name}] Building search queries for: {request.molecule}")
+        logger.info(f"      [QUERY] [{self.name}] Building search queries for: {request.molecule}")
         
         try:
             queries = self._build_query_terms(request)
-            logger.info(f"      \ud83d\udd0d [{self.name}] Generated {len(queries)} search queries")
+            logger.info(f"      [QUERY] [{self.name}] Generated {len(queries)} search queries")
 
             gathered: List[dict] = []
             seen_ids: set[str] = set()
@@ -136,7 +136,7 @@ class Worker(ABC):
                     break
 
             if not gathered:
-                logger.info(f"      \ud83d\udd04 [{self.name}] No results found, using fallback query")
+                logger.info(f"      [FALLBACK] [{self.name}] No results found, using fallback query")
                 self._record_api_budget()
                 retrieval_start = time.time()
                 try:
@@ -152,15 +152,15 @@ class Worker(ABC):
                     sla.record_retrieval(time.time() - retrieval_start)
                     raise
 
-            logger.info(f"      \ud83d\udccb [{self.name}] Retrieved {len(gathered)} passages from knowledge base")
+            logger.info(f"      [RETRIEVAL] [{self.name}] Retrieved {len(gathered)} passages from knowledge base")
             ordered = sorted(gathered, key=self._source_rank)
             limited = ordered[: request.top_k]
             
             # Track LLM usage in build_summary
             self._current_sla = sla
-            logger.info(f"      \ud83e\udde0 [{self.name}] Generating summary with LLM...")
+            logger.info(f"      [LLM] [{self.name}] Generating summary with LLM...")
             result = self.build_summary(request, limited)
-            logger.info(f"      \u2705 [{self.name}] Summary complete (confidence: {result.confidence:.2f})")
+            logger.info(f"      [OK] [{self.name}] Summary complete (confidence: {result.confidence:.2f})")
             
             result.metrics = self._compute_metrics(
                 gathered=gathered,

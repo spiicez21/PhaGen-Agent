@@ -99,14 +99,14 @@ def _run_job(job_id: str, payload: JobCreateRequest) -> None:
         job_store.persist_artifacts(job_id, serialized, version)
         
         logger.info(f"\n{'='*80}")
-        logger.info(f"\u2705 Job {job_id} completed successfully")
+        logger.info(f"[SUCCESS] Job {job_id} completed successfully")
         logger.info(f"   Recommendation: {result.output.recommendation}")
         logger.info(f"   Report version: {version}")
         logger.info(f"{'='*80}\n")
         
     except Exception as exc:  # pragma: no cover - logging stub
         logger.error(f"\n{'='*80}")
-        logger.error(f"\u274c Job {job_id} failed with error: {str(exc)}")
+        logger.error(f"[ERROR] Job {job_id} failed with error: {str(exc)}")
         logger.error(f"{'='*80}\n", exc_info=True)
         
         job_store.update_job(

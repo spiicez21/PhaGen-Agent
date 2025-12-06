@@ -40,10 +40,10 @@ try:
     print("="*80 + "\n")
     print("Agent logs will now appear in the backend console when jobs are executed.")
     print("Log format: timestamp - module - level - message")
-    print("\nExample log output:")
-    print("  2025-12-06 14:11:15 - agents.master - INFO - 🚀 Starting agent analysis for molecule: Nintedanib")
-    print("  2025-12-06 14:11:16 - agents.workers.base - INFO -    🔍 [clinical] Building search queries...")
-    print("  2025-12-06 14:11:17 - agents.workers.base - INFO -    ✅ [clinical] Summary complete (confidence: 0.85)")
+    print("\\nExample log output:")
+    print("  2025-12-06 14:11:15 - agents.master - INFO - [START] Agent analysis for molecule: Nintedanib")
+    print("  2025-12-06 14:11:16 - agents.workers.base - INFO -    [QUERY] [clinical] Building search queries...")
+    print("  2025-12-06 14:11:17 - agents.workers.base - INFO -    [OK] [clinical] Summary complete (confidence: 0.85)")
     
 except Exception as e:
     print(f"❌ Error: {e}")
