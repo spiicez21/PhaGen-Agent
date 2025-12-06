@@ -340,44 +340,27 @@ class MasterAgent:
             "Investigate: mixed or emerging signals requiring validation; "
             "No-Go: weak efficacy, blocking IP/regulatory risk, or limited market."  # noqa: E501
         )
+        # Use simpler prompt optimized for small models
         user_prompt = (
-            "You are the final reviewer who writes the Innovation Story and rubric-based recommendation.\n"
-            "Context:\n"
-            f"{format_structured_context(payload)}\n\n"
-            "Respond as minified JSON with keys innovation_story, recommendation, rationale."
-            " Recommendation must be one of Go, Investigate, No-Go per rubric: "
-            f"{rubric}"
+            f"Molecule: {molecule}\n"
+            f"Market score: {market_score}/10\n"
+            f"Clinical: {worker_outputs.get('clinical', WorkerResult()).summary[:150]}\n"
+            f"Patent: {worker_outputs.get('patent', WorkerResult()).summary[:150]}\n\n"
+            "Output valid JSON only (no markdown):\n"
+            "{\"innovation_story\": \"2-3 sentence story\", \"recommendation\": \"Go\", \"rationale\": \"brief reason\"}\n\n"
+            f"Recommendation must be: Go, Investigate, or No-Go based on: {rubric}"
         )
         try:
             raw = self.llm.generate(
                 prompt=user_prompt,
-                system_prompt=
-                "Synthesize cross-domain biotech diligence into a crisp Innovation Story and rubric-based recommendation.",
-                temperature=self.master_temperature,
-                max_tokens=400,
+                system_prompt="Return only valid JSON. No explanations or markdown.",
+                temperature=0.1,  # Lower temp for more reliable JSON
+                max_tokens=300,
             )
             parsed = self._parse_master_response(raw)
         except (LLMClientError, ValueError) as exc:  # pragma: no cover - runtime
-            self._logger.warning("Master synthesis attempt 1 failed: %s, trying simpler prompt", exc)
-            # Retry with a much simpler prompt for small models
-            try:
-                simple_prompt = (
-                    f"Molecule: {molecule}\n"
-                    f"Market score: {market_score}\n"
-                    f"Clinical summary: {worker_outputs.get('clinical', WorkerResult()).summary[:200]}\n"
-                    f"Patent summary: {worker_outputs.get('patent', WorkerResult()).summary[:200]}\n\n"
-                    "Return only JSON: {\"innovation_story\": \"brief story\", \"recommendation\": \"Go or Investigate or No-Go\", \"rationale\": \"reason\"}"
-                )
-                raw = self.llm.generate(
-                    prompt=simple_prompt,
-                    system_prompt="You are a JSON-only responder.",
-                    temperature=0.1,
-                    max_tokens=300,
-                )
-                parsed = self._parse_master_response(raw)
-            except (LLMClientError, ValueError) as retry_exc:
-                self._logger.warning("Master synthesis fallback after retry: %s", retry_exc)
-                return fallback_story, fallback_recommendation
+            self._logger.debug("Master synthesis JSON parse failed: %s, using fallback", exc)
+            return fallback_story, fallback_recommendation
 
         story = parsed.get("innovation_story") or fallback_story
         recommendation = self._resolve_recommendation(

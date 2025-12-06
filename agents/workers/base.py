@@ -112,11 +112,21 @@ class Worker(ABC):
             EvidenceItem(
                 type=passage.get("source_type", default_type),
                 text=passage.get("snippet", ""),
-                url=passage.get("url", ""),
+                url=self._format_evidence_url(passage, default_type),
                 confidence=max(0.4, 1 - (idx * 0.1)),
             )
             for idx, passage in enumerate(passages)
         ]
+    
+    def _format_evidence_url(self, passage: dict, source_type: str) -> str:
+        """Format evidence URL with descriptive placeholder if missing."""
+        url = passage.get("url", "").strip()
+        if url and url != "https://example.org/evidence":
+            return url
+        # Generate descriptive source reference
+        doc_id = passage.get("id", "unknown")
+        origin = passage.get("origin", "indexed")
+        return f"source://{source_type}/{origin}/{doc_id}"
 
     # Quality metrics & guardrails ---------------------------------
     def _compute_metrics(

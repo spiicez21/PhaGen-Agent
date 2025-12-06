@@ -5,12 +5,25 @@ REM Opens each service in a separate PowerShell window
 echo Starting PhaGen-Agent services...
 echo.
 
+REM Check if Docker Desktop is running
+echo Checking Docker Desktop...
+docker info >nul 2>&1
+if errorlevel 1 (
+    echo [WARNING] Docker Desktop is not running!
+    echo Please start Docker Desktop first, then run this script again.
+    echo.
+    echo Skipping MinIO and continuing with other services...
+    echo.
+    timeout /t 3 /nobreak >nul
+    goto SKIP_MINIO
+)
+
 REM Start MinIO (Docker)
 echo [1/4] Starting MinIO S3 Storage...
 start "MinIO S3" powershell -NoExit -Command "cd D:\PhaGen-Agent\infra; docker compose up minio"
-
-REM Wait a bit for MinIO to initialize
 timeout /t 3 /nobreak >nul
+
+:SKIP_MINIO
 
 REM Start Ollama (if not already running)
 echo [2/4] Starting Ollama LLM Server...
