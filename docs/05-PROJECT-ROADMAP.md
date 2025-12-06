@@ -89,13 +89,13 @@ This to-do list is distilled from the implementation roadmap in `ignore.md`. Tas
 - [ ] Prepare the hackathon demo script, slides, and fallback assets outlined in Section 11.
 
 #### ➕ Added — Security & Compliance (Core)
-- [ ] Zero Data Retention (ZDR) mode flag that disables persistence of input documents/user uploads (clear memory + no S3 writes).
-- [ ] VPC / On-Prem / Self-Host deployment option (Terraform + Docker Compose templates).
-- [ ] Tenant isolation & RBAC with tenant-scoped DB schema/row-level permissions plus UI/API roles.
-- [ ] End-to-end encryption: TLS 1.3 in transit, AES-256 at rest (DB/S3) with KMS-managed keys.
-- [ ] Centralized secrets management (Vault or cloud KMS) with rotating keys.
-- [ ] Immutable audit logs for worker runs, data access, and report generation (timestamps, user, job_id) with retention policy.
-- [ ] PII redaction & DLP to scrub sensitive fields before storage and block exfiltration of PHI/email identifiers.
+- [x] Zero Data Retention (ZDR) mode flag that disables persistence of input documents/user uploads (clear memory + no S3 writes).
+- [x] VPC / On-Prem / Self-Host deployment option (Terraform + Docker Compose templates).
+- [x] Tenant isolation & RBAC with tenant-scoped DB schema/row-level permissions plus UI/API roles.
+- [x] End-to-end encryption: TLS 1.3 in transit, AES-256 at rest (DB/S3) with KMS-managed keys.
+- [x] Centralized secrets management (Vault or cloud KMS) with rotating keys.
+- [x] Immutable audit logs for worker runs, data access, and report generation (timestamps, user, job_id) with retention policy.
+- [x] PII redaction & DLP to scrub sensitive fields before storage and block exfiltration of PHI/email identifiers.
 - [x] Network egress controls enforcing default-deny for customer-hosted agents (see Stretch section).
 - [x] Integrated SAST/DAST & dependency scanning (Snyk/Dependabot) in CI (Trivy, Bandit, Safety in security-tests.yml).
 - [ ] Pen testing & vulnerability management cadence (quarterly pen tests, critical CVE patch SLA).

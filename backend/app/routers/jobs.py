@@ -10,6 +10,7 @@ from ..jobs import InMemoryJobStore, PostgresJobStore
 from ..reporting import generate_report_pdf
 from ..storage import store_report_pdf
 from ..schemas import JobCreateRequest, JobResponse, JobStatus
+from ..security.pii_redactor import get_dlp_policy
 
 logger = logging.getLogger(__name__)
 
@@ -142,7 +143,22 @@ def create_job(
 @router.get("/{job_id}", response_model=JobResponse)
 def get_job(job_id: str) -> JobResponse:
     try:
-        return job_store.get_job(job_id)
+        job = job_store.get_job(job_id)
+        
+        # DLP check - scan job payload for PII before returning
+        if job.payload:
+            dlp = get_dlp_policy()
+            payload_str = str(job.payload)
+            allowed, reason = dlp.enforce_policy(payload_str, operation=f"get_job:{job_id}")
+            
+            if not allowed:
+                logger.warning(f"[DLP] Blocked job retrieval due to PII: {job_id}")
+                raise HTTPException(
+                    status_code=403,
+                    detail="Job contains sensitive data that cannot be exported"
+                )
+        
+        return job
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Job not found") from exc
 

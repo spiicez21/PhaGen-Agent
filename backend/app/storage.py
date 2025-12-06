@@ -6,6 +6,8 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from .config import get_settings
+from .security.zdr_manager import get_zdr_manager
+from .security.pii_redactor import get_pii_redactor
 
 try:  # pragma: no cover - optional heavy dependency
     import boto3
@@ -67,6 +69,26 @@ def _ensure_bucket(client, bucket: str) -> None:
 
 
 def _put_object(*, bucket: str, key: str, body: bytes, content_type: str) -> str | None:
+    # Check ZDR mode - prevent storage writes
+    zdr = get_zdr_manager()
+    if zdr.is_enabled():
+        _logger.info(f"[ZDR] Blocked S3 write: {key} (ZDR mode enabled)")
+        return None
+    
+    # Redact PII from text content before storage
+    redactor = get_pii_redactor()
+    if content_type.startswith("text/") or content_type == "application/json":
+        try:
+            text = body.decode("utf-8")
+            redacted_text, counts = redactor.redact_text(text)
+            
+            if counts:
+                _logger.info(f"[PII] Redacted {sum(counts.values())} PII instances from {key}")
+                body = redacted_text.encode("utf-8")
+        except (UnicodeDecodeError, AttributeError):
+            # Not text content or decode failed, skip redaction
+            pass
+    
     client = _client()
     if not client:
         return None
@@ -87,6 +109,8 @@ def _put_object(*, bucket: str, key: str, body: bytes, content_type: str) -> str
 def store_raw_document(job_id: str, payload: dict) -> Optional[str]:
     if not _is_enabled():
         return None
+    
+    # ZDR check handled in _put_object
     timestamp = datetime.utcnow().replace(tzinfo=timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     key = f"jobs/{job_id}/raw/{timestamp}.json"
     body = json.dumps(payload, ensure_ascii=False, default=str).encode("utf-8")
