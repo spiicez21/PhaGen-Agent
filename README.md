@@ -45,19 +45,34 @@ PhaGen Agentic is a production-ready, agentic multi-worker platform that compres
 
 ## 📚 Documentation
 
-Comprehensive documentation is available in the `docs/` directory:
+Comprehensive documentation is available in the `docs/` directory. **Start here**: [Getting Started](./docs/getting-started.md)
 
-1. **[01-ARCHITECTURE.md](./docs/01-ARCHITECTURE.md)** - System architecture and technology stack
-2. **[02-GETTING-STARTED.md](./docs/02-GETTING-STARTED.md)** - Setup and installation instructions
-3. **[03-PIPELINE-OVERVIEW.md](./docs/03-PIPELINE-OVERVIEW.md)** - Data processing pipeline
-4. **[04-UI-WIREFRAMES.md](./docs/04-UI-WIREFRAMES.md)** - UI design specifications
-5. **[05-PROJECT-ROADMAP.md](./docs/05-PROJECT-ROADMAP.md)** - Implementation tracker and roadmap
-6. **[06-ML-FEATURES.md](./docs/06-ML-FEATURES.md)** - Machine learning capabilities
-7. **[07-ADVANCED-FEATURES.md](./docs/07-ADVANCED-FEATURES.md)** - Advanced analytics features
-8. **[08-ENTERPRISE-SECURITY.md](./docs/08-ENTERPRISE-SECURITY.md)** - Security infrastructure
-9. **[09-IMPLEMENTATION-STATUS.md](./docs/09-IMPLEMENTATION-STATUS.md)** - Current implementation status
+### Core Documentation
+- **[Architecture](./docs/architecture.md)** - System design, components, and technical architecture
+- **[Getting Started](./docs/getting-started.md)** - Installation, setup, and quick start guide
+- **[Pipeline Overview](./docs/pipeline-overview.md)** - Analysis workflow and data processing pipeline
+- **[Roadmap](./docs/roadmap.md)** - Development timeline, milestones, and future plans
+- **[Implementation Status](./docs/implementation-status.md)** - Current development status
 
-**Start here**: [02-GETTING-STARTED.md](./docs/02-GETTING-STARTED.md) for setup instructions.
+### Features & Capabilities
+- **[ML Features](./docs/ml-features.md)** - Machine learning capabilities and models
+- **[Advanced Features](./docs/advanced-features.md)** - Enterprise and advanced functionality
+- **[UI Wireframes](./docs/ui-wireframes.md)** - Frontend design specifications
+
+### Security & Authentication
+- **[Enterprise Security](./docs/enterprise-security.md)** - Security architecture and best practices
+- **[Authentication Quickstart](./docs/authentication-quickstart.md)** - Quick start for authentication
+- **[Authentication Implementation](./docs/authentication-implementation.md)** - Detailed auth system docs
+- **[Data Protection](./docs/data-protection-guide.md)** - PII handling and data protection
+- **[Encryption Guide](./docs/encryption-guide.md)** - Encryption implementation
+- **[Secrets Management](./docs/secrets-management-guide.md)** - API keys and secrets
+
+### Development & Operations
+- **[Agent Logging](./docs/agent-logging.md)** - Logging configuration and best practices
+- **[Frontend Navigation](./docs/frontend-navigation.md)** - UI navigation system implementation
+- **[Implementation Summary](./docs/implementation-summary.md)** - Overall implementation overview
+
+📖 **[View Full Documentation Index](./docs/README.md)**
 
 ## Quick start
 
@@ -174,7 +189,7 @@ The repo-level `requirements.txt` simply pulls in `backend/requirements.txt` and
 - **Container Security**: Trivy scanning, Bandit SAST, Snyk dependency checks
 - **Audit Logging**: Immutable job/evidence access logs for regulatory compliance
 
-See `docs/ML_FEATURES.md` for ML implementation details and `IMPLEMENTATION_COMPLETE.md` for infrastructure setup.
+See [ML Features](./docs/ml-features.md) for ML implementation details and [Implementation Status](./docs/implementation-status.md) for infrastructure setup.
 
 ## Architecture overview
 
@@ -216,7 +231,7 @@ Each piece lives in its own directory but shares the same repo:
 
 **Supporting Services**: Celery Workers, MinIO (S3), Ollama (LLM), RDKit Service
 
-See `docs/01-ARCHITECTURE.md` for the full sequence diagram and component details.
+See [Architecture](./docs/architecture.md) for the full sequence diagram and component details.
 
 ## Pipeline & orchestration
 
@@ -299,7 +314,7 @@ export PHAGEN_OFFLINE_MODE=true
 docker-compose up -d
 ```
 
-See `docs/08-ENTERPRISE-SECURITY.md` and `infra/airgap/AIRGAP_DEPLOYMENT_GUIDE.md` for details.
+See [Enterprise Security](./docs/enterprise-security.md) and `infra/airgap/AIRGAP_DEPLOYMENT_GUIDE.md` for details.
 
 ## 🔒 Security Features
 
@@ -337,10 +352,10 @@ python evals/run_eval.py
 
 ## 🤝 Contributing
 
-1. Review `docs/05-PROJECT-ROADMAP.md` for current status
+1. Review [Roadmap](./docs/roadmap.md) for current status
 2. Follow code style: Black (Python), Prettier (TypeScript)
 3. Add tests for new features
-4. Update documentation in `docs/`
+4. Update documentation in `docs/` (use lowercase-with-hyphens.md naming)
 5. Run security scans before PR
 
 ## 📄 License
@@ -349,9 +364,9 @@ python evals/run_eval.py
 
 ## 💬 Support
 
-- **Documentation**: See `docs/` directory
+- **Documentation**: See [Documentation Index](./docs/README.md)
 - **Issues**: Open a GitHub issue
-- **Security**: See `docs/08-ENTERPRISE-SECURITY.md`
+- **Security**: See [Enterprise Security](./docs/enterprise-security.md)
 
 ---
 

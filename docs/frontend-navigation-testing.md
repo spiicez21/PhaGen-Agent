@@ -77,20 +77,29 @@ JSON.parse(localStorage.getItem('phagen_job_history'))
 ### Issue: Job status page doesn't redirect when complete
 **Solution:** 
 1. Check console for polling messages
-2. Verify job.status === "completed" in API response
-3. Check if router.push() is being called
+2. Verify job.status === "COMPLETED" in API response (uppercase)
+3. Frontend should convert to lowercase before comparison
+4. Check if router.push() is being called
 
 ### Issue: Results page shows "Job is still running"
 **Solution:** Wait for job to complete, or check job status first
 
+### Issue: Results not displaying even though job is COMPLETED
+**Solution:** Case-sensitivity bug - fixed by converting status to lowercase before comparison. Verify the fix is applied:
+```typescript
+const status = job.status.toLowerCase();
+if (status === "completed") { ... }
+```
+
 ## Expected Polling Behavior
 
-1. Job submitted → status: "pending"
-2. Agents start → status: "running"
+1. Job submitted → status: "PENDING" (backend returns uppercase)
+2. Agents start → status: "RUNNING"
 3. Poll every 3 seconds
 4. Workers complete one by one
-5. All workers done → status: "completed"
-6. Wait 1.5 seconds → redirect to results
+5. All workers done → status: "COMPLETED"
+6. Frontend converts to lowercase for comparison
+7. Wait 1.5 seconds → redirect to results
 
 ## Browser DevTools Tips
 
@@ -98,3 +107,5 @@ JSON.parse(localStorage.getItem('phagen_job_history'))
 2. **Console:** Look for `[Job Status]` and `[Results]` logs
 3. **Application Tab → Local Storage:** Check `phagen_job_history`
 4. **React DevTools:** Inspect jobId state in components
+5. **Status Values:** Backend returns UPPERCASE (`COMPLETED`, `RUNNING`, `PENDING`, `FAILED`)
+6. **Frontend Handling:** Status is converted to lowercase before comparison
