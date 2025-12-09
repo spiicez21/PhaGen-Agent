@@ -28,6 +28,7 @@ indexes/.embedding_cache.json
 crawler/storage/
 crawler/**/*.dataset
 crawler/**/*.jsonl
+chroma_backup_20251208_195433
 
 # devfiles
 ignore.md

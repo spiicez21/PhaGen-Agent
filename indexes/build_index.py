@@ -165,14 +165,79 @@ def iter_records(directory: Path) -> Iterable[dict]:
             yield json.load(handle)
 
 
-def record_to_document(record: dict) -> tuple[str, dict, str]:
-    text = ""
-    if record.get("via") == "api" and record.get("payload"):
-        text = json.dumps(record["payload"], ensure_ascii=False)
+def extract_text_from_payload(payload: dict, source_type: str) -> str:
+    """Extract meaningful text from structured JSON payloads."""
+    parts = []
+    
+    if source_type == "clinical":
+        # Extract from clinical trial data
+        study = payload.get("study", {})
+        parts.extend([
+            study.get("title", ""),
+            study.get("sponsor", ""),
+            study.get("indication", ""),
+            study.get("primary_outcome", ""),
+            study.get("result_summary", ""),
+            f"Phase: {study.get('phase', '')}",
+            f"Status: {study.get('status', '')}",
+            f"Enrollment: {study.get('enrollment', '')}",
+        ])
+    elif source_type == "literature":
+        # Extract from literature/publication data
+        article = payload.get("article", {})
+        parts.extend([
+            article.get("title", ""),
+            article.get("abstract", ""),
+            article.get("journal", ""),
+            f"Year: {article.get('year', '')}",
+            article.get("keywords", ""),
+        ])
+    elif source_type == "patent":
+        # Extract from patent data
+        parts.extend([
+            payload.get("title", ""),
+            payload.get("abstract", ""),
+            payload.get("claims", ""),
+            payload.get("description", ""),
+            f"Assignee: {payload.get('assignee', '')}",
+        ])
+    elif source_type == "regulatory":
+        # Extract from regulatory data
+        parts.extend([
+            payload.get("product", ""),
+            payload.get("indication", ""),
+            payload.get("approval_year", ""),
+            payload.get("label_highlights", ""),
+            payload.get("mechanism", ""),
+        ])
     else:
+        # Fallback: try common fields
+        for key in ["title", "text", "summary", "description", "abstract", "content"]:
+            if key in payload:
+                val = payload[key]
+                if isinstance(val, str):
+                    parts.append(val)
+                elif isinstance(val, dict):
+                    parts.extend(str(v) for v in val.values() if v)
+    
+    # Filter and join
+    text = " ".join(str(p).strip() for p in parts if p and str(p).strip())
+    return text or json.dumps(payload, ensure_ascii=False)[:1000]  # Fallback to JSON snippet
+
+
+def record_to_document(record: dict) -> tuple[str, dict, str]:
+    source_type = record.get("source_type", "unknown")
+    text = ""
+    
+    if record.get("via") == "api" and record.get("payload"):
+        # Extract meaningful text from structured payload
+        text = extract_text_from_payload(record["payload"], source_type)
+    else:
+        # Use existing text fields
         text = record.get("snippet") or record.get("text") or ""
+    
     metadata = {
-        "source_type": record.get("source_type", "unknown"),
+        "source_type": source_type,
         "origin": record.get("via", "html"),
         "url": record.get("url", ""),
     }

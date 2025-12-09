@@ -18,7 +18,11 @@ class Retriever:
     ) -> None:
         self.top_k = top_k
         self.context_tokens = context_tokens
-        self.index_path = index_path or Path("indexes/chroma")
+        # Use absolute path relative to repo root to work from any directory
+        if index_path is None:
+            repo_root = Path(__file__).resolve().parents[1]  # agents/ -> repo root
+            index_path = repo_root / "indexes" / "chroma"
+        self.index_path = index_path
         self._collection = self._init_collection()
 
     def search(
@@ -32,7 +36,12 @@ class Retriever:
         max_tokens = max_tokens or self.context_tokens
         results = self._query_index(query, source_type=source_type, top_k=top_k)
         if not results:
-            return self._mock_passages(query, source_type, top_k)
+            import logging
+            logging.warning(
+                f"No evidence found for query='{query}' source={source_type}. "
+                f"Index may be empty or needs rebuild. Returning empty results."
+            )
+            return []
         return self._enforce_budget(results, max_tokens=max_tokens, top_k=top_k)
 
     # Internal helpers -------------------------------------------------

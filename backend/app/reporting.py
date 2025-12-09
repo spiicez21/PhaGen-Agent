@@ -9,25 +9,14 @@ from jinja2 import BaseLoader, Environment, select_autoescape
 from .chemistry import build_structure_payload
 
 try:  # pragma: no cover - optional dependency
-    import pdfkit
+    from xhtml2pdf import pisa
+    XHTML2PDF_AVAILABLE = True
 except Exception as exc:  # noqa: BLE001
-    pdfkit = None  # type: ignore[assignment]
-    _PDFKIT_IMPORT_ERROR: Exception | None = exc
-    _PDFKIT_CONFIG = None
-    _PDFKIT_CONFIG_ERROR: Exception | None = exc
+    pisa = None  # type: ignore[assignment]
+    XHTML2PDF_AVAILABLE = False
+    _XHTML2PDF_IMPORT_ERROR: Exception | None = exc
 else:
-    _PDFKIT_IMPORT_ERROR = None
-    wkhtmltopdf_path = os.getenv("WKHTMLTOPDF_PATH")
-    try:
-        _PDFKIT_CONFIG = (
-            pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
-            if wkhtmltopdf_path
-            else pdfkit.configuration()
-        )
-        _PDFKIT_CONFIG_ERROR: Exception | None = None
-    except (OSError, IOError) as exc:  # wkhtmltopdf binary missing
-        _PDFKIT_CONFIG = None
-        _PDFKIT_CONFIG_ERROR = exc
+    _XHTML2PDF_IMPORT_ERROR = None
 
 from .schemas import JobResponse
 
@@ -377,19 +366,28 @@ def render_report_html(job: JobResponse) -> str:
 
 
 def generate_report_pdf(job: JobResponse) -> bytes:
+    from io import BytesIO
+    
     html = render_report_html(job)
 
-    if pdfkit and _PDFKIT_CONFIG:
-        try:
-            return pdfkit.from_string(html, False, configuration=_PDFKIT_CONFIG)
-        except (OSError, IOError) as exc:  # noqa: BLE001
-            raise RuntimeError(
-                "wkhtmltopdf failed to generate a PDF. Ensure the wkhtmltopdf binary is installed "
-                "and accessible (set WKHTMLTOPDF_PATH if it's not on PATH)."
-            ) from exc
+    if not XHTML2PDF_AVAILABLE:
+        raise RuntimeError(
+            "xhtml2pdf is not available. Install it with: pip install xhtml2pdf. "
+            f"Import error: {_XHTML2PDF_IMPORT_ERROR}"
+        )
 
-    raise RuntimeError(
-        "wkhtmltopdf is not configured. Install wkhtmltopdf from https://wkhtmltopdf.org/downloads.html "
-        "and ensure pdfkit can locate it (add to PATH or set WKHTMLTOPDF_PATH). "
-        f"pdfkit import error: {_PDFKIT_IMPORT_ERROR}; configuration error: {_PDFKIT_CONFIG_ERROR}"
-    )
+    try:
+        # Generate PDF from HTML string using xhtml2pdf
+        output = BytesIO()
+        pisa_status = pisa.CreatePDF(html, dest=output)
+        
+        if pisa_status.err:
+            raise RuntimeError(f"xhtml2pdf reported {pisa_status.err} errors during PDF generation")
+        
+        pdf_bytes = output.getvalue()
+        output.close()
+        return pdf_bytes
+    except Exception as exc:
+        raise RuntimeError(
+            f"xhtml2pdf failed to generate PDF: {exc}"
+        ) from exc

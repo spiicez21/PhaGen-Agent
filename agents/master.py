@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import ast
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
 from dataclasses import asdict
 from typing import Dict, List
@@ -349,42 +350,52 @@ class MasterAgent:
         fallback_recommendation: Recommendation,
     ) -> tuple[str, Recommendation]:
         if not self.llm:
-            return fallback_story, fallback_recommendation
-        payload = {
-            "molecule": molecule,
-            "market_score": market_score,
-            "workers": self._build_worker_payload(worker_outputs),
-        }
+            raise RuntimeError("LLM client not available for synthesis")
+        
         rubric = (
             "Go: compelling clinical efficacy, manageable risk, clear TAM; "
             "Investigate: mixed or emerging signals requiring validation; "
-            "No-Go: weak efficacy, blocking IP/regulatory risk, or limited market."  # noqa: E501
+            "No-Go: weak efficacy, blocking IP/regulatory risk, or limited market."
         )
-        # Use simpler prompt optimized for small models
-        clinical_summary = worker_outputs.get('clinical').summary[:150] if 'clinical' in worker_outputs else 'N/A'
-        patent_summary = worker_outputs.get('patent').summary[:150] if 'patent' in worker_outputs else 'N/A'
+        
+        clinical_summary = worker_outputs.get('clinical').summary if 'clinical' in worker_outputs else 'N/A'
+        patent_summary = worker_outputs.get('patent').summary if 'patent' in worker_outputs else 'N/A'
+        literature_summary = worker_outputs.get('literature').summary if 'literature' in worker_outputs else 'N/A'
+        
         user_prompt = (
             f"Molecule: {molecule}\n"
             f"Market score: {market_score}/10\n"
             f"Clinical: {clinical_summary}\n"
-            f"Patent: {patent_summary}\n\n"
-            "Output valid JSON only (no markdown):\n"
-            "{\"innovation_story\": \"2-3 sentence story\", \"recommendation\": \"Go\", \"rationale\": \"brief reason\"}\n\n"
-            f"Recommendation must be: Go, Investigate, or No-Go based on: {rubric}"
+            f"Patent: {patent_summary}\n"
+            f"Literature: {literature_summary}\n\n"
+            "TASK: Generate a structured mechanistic inference analysis.\n"
+            "REQUIREMENTS:\n"
+            "- Synthesize a story based on target prediction, pathway ranking, and MoA hypotheses.\n"
+            "- Do NOT return fallback text or simple summaries.\n"
+            "- Recommendation must be one of: Go, Investigate, No-Go.\n"
+            "- Use the exact format below.\n\n"
+            "FORMAT:\n"
+            "STORY: <detailed mechanistic story or failure analysis>\n"
+            "RECOMMENDATION: <Go|Investigate|No-Go>\n"
+            "RATIONALE: <brief reason>"
         )
+        
         try:
             raw = self.llm.generate(
                 prompt=user_prompt,
-                system_prompt="Return only valid JSON. No explanations or markdown.",
-                temperature=0.1,  # Lower temp for more reliable JSON
-                max_tokens=300,
+                system_prompt="You are a chemical expert. Follow the output format strictly.",
+                temperature=0.1,
+                max_tokens=600,
             )
             parsed = self._parse_master_response(raw)
-        except (LLMClientError, ValueError) as exc:  # pragma: no cover - runtime
-            self._logger.debug("Master synthesis JSON parse failed: %s, using fallback", exc)
-            return fallback_story, fallback_recommendation
+        except (LLMClientError, ValueError) as exc:
+            self._logger.error("Master synthesis failed: %s", exc)
+            raise RuntimeError(f"Synthesis failed: {exc}")
 
-        story = parsed.get("innovation_story") or fallback_story
+        story = parsed.get("innovation_story")
+        if not story:
+             raise ValueError("Generated output missing 'STORY' section")
+             
         recommendation = self._resolve_recommendation(
             parsed.get("recommendation"),
             fallback_recommendation,
@@ -418,31 +429,42 @@ class MasterAgent:
 
     def _parse_master_response(self, raw: str) -> dict:
         snippet = raw.strip()
-        # Try direct parse first
+        
+        # 1. Try parsing custom Key-Value format (STORY:, RECOMMENDATION:, RATIONALE:)
+        text = snippet.replace("\r\n", "\n")
+        data = {}
+        
+        story_match = re.search(r"STORY:\s*(.*?)(?=\nRECOMMENDATION:|$)", text, re.DOTALL | re.IGNORECASE)
+        if story_match:
+            data["innovation_story"] = story_match.group(1).strip()
+            
+        rec_match = re.search(r"RECOMMENDATION:\s*(.*?)(?=\nRATIONALE:|$)", text, re.DOTALL | re.IGNORECASE)
+        if rec_match:
+            data["recommendation"] = rec_match.group(1).strip()
+            
+        rat_match = re.search(r"RATIONALE:\s*(.*?)(?=$)", text, re.DOTALL | re.IGNORECASE)
+        if rat_match:
+            data["rationale"] = rat_match.group(1).strip()
+            
+        if data.get("innovation_story"):
+            return data
+
+        # 2. Fallback: Try JSON parsing
         try:
             return json.loads(snippet)
         except json.JSONDecodeError:
             pass
-        # Try extracting JSON from markdown code blocks
-        if "```json" in snippet:
-            start = snippet.find("```json") + 7
-            end = snippet.find("```", start)
-            if end > start:
-                snippet = snippet[start:end].strip()
-                try:
-                    return json.loads(snippet)
-                except json.JSONDecodeError:
-                    pass
-        # Try finding first { to last }
-        start = snippet.find("{")
-        end = snippet.rfind("}")
-        if start != -1 and end != -1 and end > start:
-            json_blob = snippet[start : end + 1]
+            
+        match = re.search(r"(\{[\s\S]*\})", snippet)
+        if match:
+            blob = match.group(1)
             try:
-                return json.loads(json_blob)
-            except json.JSONDecodeError as e:
-                self._logger.debug(f"JSON parse failed: {e}, raw response: {raw[:200]}")
-        raise ValueError("Master synthesis did not return valid JSON")
+                return json.loads(blob)
+            except json.JSONDecodeError:
+                pass
+
+        safe_raw = raw[:500].replace("\n", "\\n")
+        raise ValueError(f"Master synthesis did not return valid format. Raw output: {safe_raw}")
 
     def _resolve_recommendation(
         self,

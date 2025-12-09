@@ -30,7 +30,7 @@ class LLMClient:
         timeout: float = 60.0,
     ) -> None:
         self.provider = (provider or os.getenv("LLM_PROVIDER", "ollama")).lower()
-        self.model = model or os.getenv("LLM_MODEL", "gemma2:2b")
+        self.model = model or os.getenv("LLM_MODEL", "smollm:360m")
         default_base = (
             "http://localhost:11434"
             if self.provider == "ollama"
