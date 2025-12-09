@@ -26,10 +26,10 @@ const exportToJSON = (data: any, filename: string) => {
 const exportToCSV = (data: any, filename: string) => {
   // Convert workers data to CSV format
   const rows: string[][] = [];
-  
+
   // Header
   rows.push(['Worker', 'Summary', 'Confidence', 'Confidence Band']);
-  
+
   // Data rows
   Object.entries(data.workers || {}).forEach(([workerName, workerData]: [string, any]) => {
     rows.push([
@@ -39,7 +39,7 @@ const exportToCSV = (data: any, filename: string) => {
       workerData?.confidence_band || ''
     ]);
   });
-  
+
   const csvContent = rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
   const blob = new Blob([csvContent], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
@@ -54,7 +54,7 @@ function ResultsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const urlJobId = searchParams.get("id");
-  
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [jobData, setJobData] = useState<any>(null);
@@ -67,10 +67,10 @@ function ResultsPage() {
       if (!urlJobId) {
         const recentJobs = jobStore.getAll();
         console.log('[Results] Auto-detection: Found', recentJobs.length, 'jobs in history');
-        
+
         // Priority 1: Find most recent completed job
         let targetJob = recentJobs.find(j => j.status.toLowerCase() === "completed");
-        
+
         // Priority 2: If no completed jobs, check for any ongoing jobs and redirect
         if (!targetJob) {
           const ongoingJob = recentJobs.find(j => {
@@ -83,27 +83,27 @@ function ResultsPage() {
             return;
           }
         }
-        
+
         // Priority 3: Fall back to most recent job regardless of status
         if (!targetJob && recentJobs.length > 0) {
           targetJob = recentJobs[0]; // Most recent job
           console.log('[Results] Using most recent job from history:', targetJob.job_id, 'with status:', targetJob.status);
         }
-        
+
         if (targetJob) {
           console.log('[Results] Auto-detected job:', targetJob.job_id);
           setJobId(targetJob.job_id);
           router.replace(`/results?id=${targetJob.job_id}`);
           return;
         }
-        
+
         // No jobs at all in history
         console.log('[Results] No jobs found in history');
         setError("No jobs found. Please start a new analysis first.");
         setLoading(false);
         return;
       }
-      
+
       setJobId(urlJobId);
     };
 
@@ -117,15 +117,15 @@ function ResultsPage() {
       try {
         const job = await api.getJob(jobId);
         console.log('[Results] Fetched job:', job.job_id, 'Status:', job.status, 'Has payload:', !!job.payload);
-        
+
         const status = job.status.toLowerCase();
-        
+
         if (status === "completed") {
           // Check if payload exists and is not empty
           if (job.payload) {
             const payloadKeys = typeof job.payload === 'object' ? Object.keys(job.payload) : [];
             console.log('[Results] Payload keys:', payloadKeys);
-            
+
             if (payloadKeys.length > 0) {
               console.log('[Results] Setting job data');
               setJobData(job.payload);
@@ -139,8 +139,8 @@ function ResultsPage() {
             setError("Job completed but results are not available. Please try again or contact support.");
           }
         } else if (status === "failed") {
-          const errorMsg = typeof job.payload === 'object' && job.payload && 'error' in job.payload 
-            ? String((job.payload as any).error) 
+          const errorMsg = typeof job.payload === 'object' && job.payload && 'error' in job.payload
+            ? String((job.payload as any).error)
             : "Unknown error";
           setError("Job failed: " + errorMsg);
         } else if (status === "running") {
@@ -270,8 +270,8 @@ function ResultsPage() {
                   {innovationStory}
                 </p>
               </div>
-              
-              <div className="flex flex-wrap gap-4 pt-4">
+
+              <div className="flex flex-wrap gap-4 pt-6 mt-6 border-t">
                 <Button onClick={handleExportPDF} disabled={exporting}>
                   {exporting ? (
                     <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Downloading...</>
@@ -295,60 +295,59 @@ function ResultsPage() {
           </Card>
 
           <div className="grid gap-4 md:grid-cols-2">
-             {Object.entries(workers).map(([key, worker]: [string, any]) => (
-                <Card key={key} className="bg-card/50">
-                   <CardHeader className="pb-2">
-                      <CardTitle className="text-base capitalize flex items-center gap-2">
-                         {key === 'clinical' && <Microscope className="h-4 w-4" />}
-                         {key === 'literature' && <BookOpen className="h-4 w-4" />}
-                         {key === 'patent' && <Scale className="h-4 w-4" />}
-                         {key === 'market' && <BarChart3 className="h-4 w-4" />}
-                         {key} Analysis
-                      </CardTitle>
-                   </CardHeader>
-                   <CardContent>
-                      <p className="text-sm text-muted-foreground line-clamp-3">
-                         {worker?.summary || 'No summary available'}
-                      </p>
-                      <Link href={`/evidence/${key}`} className="text-xs text-primary hover:underline mt-2 inline-block">
-                         View details
-                      </Link>
-                   </CardContent>
-                </Card>
-             ))}
+            {Object.entries(workers).map(([key, worker]: [string, any]) => (
+              <Card key={key} className="bg-secondary/5 border-secondary/20">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base capitalize flex items-center gap-2">
+                    {key === 'clinical' && <Microscope className="h-4 w-4" />}
+                    {key === 'literature' && <BookOpen className="h-4 w-4" />}
+                    {key === 'patent' && <Scale className="h-4 w-4" />}
+                    {key === 'market' && <BarChart3 className="h-4 w-4" />}
+                    {key} Analysis
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground line-clamp-3">
+                    {worker?.summary || 'No summary available'}
+                  </p>
+                  <Link href={`/evidence/${key}`} className="text-xs text-primary hover:underline mt-2 inline-block">
+                    View details
+                  </Link>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
 
         <div className="space-y-8">
-
           {structure && (
-             <Card>
-                <CardHeader>
-                   <CardTitle>Structure</CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center justify-center bg-white/5 rounded-md p-4 space-y-4">
-                   {structure.svg ? (
-                      <div
-                        className="w-full h-48 flex items-center justify-center bg-white rounded p-2"
-                        dangerouslySetInnerHTML={{ __html: structure.svg }}
-                      />
-                   ) : (
-                      <div className="text-center text-muted-foreground text-sm py-8">
-                         Structure Preview Unavailable
-                      </div>
-                   )}
-                   <div className="text-center w-full">
-                      <div className="text-xs font-mono break-all opacity-50 bg-black/20 p-2 rounded">
-                         {structure.smiles}
-                      </div>
-                      {structure.source_type && (
-                         <p className="text-[10px] text-muted-foreground mt-2">
-                            Source: {structure.source_type.toUpperCase()}
-                         </p>
-                      )}
-                   </div>
-                </CardContent>
-             </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Structure</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center justify-center bg-muted/20 rounded-md p-6 space-y-4">
+                {structure.svg ? (
+                  <div
+                    className="w-full h-64 flex items-center justify-center bg-white rounded-lg p-4 shadow-sm overflow-hidden [&>svg]:w-full [&>svg]:h-full [&>svg]:object-contain"
+                    dangerouslySetInnerHTML={{ __html: structure.svg }}
+                  />
+                ) : (
+                  <div className="text-center text-muted-foreground text-sm py-8">
+                    Structure Preview Unavailable
+                  </div>
+                )}
+                <div className="text-center w-full">
+                  <div className="text-xs font-mono break-all bg-background/50 p-3 rounded border border-border/50 text-muted-foreground select-all shadow-inner">
+                    {structure.smiles}
+                  </div>
+                  {structure.source_type && (
+                    <p className="text-[10px] text-muted-foreground mt-2 font-medium tracking-wide">
+                      SOURCE: {structure.source_type.toUpperCase()}
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           )}
         </div>
       </div>
@@ -413,9 +412,9 @@ function ResultsPage() {
           </CardContent>
         </Card>
       )}
-      
+
       <div className="pt-8">
-         <EvidenceTabs workers={workers} reportJobId={jobId || undefined} reportVersion={reportVersion} />
+        <EvidenceTabs workers={workers} reportJobId={jobId || undefined} reportVersion={reportVersion} />
       </div>
 
       {validation && (
