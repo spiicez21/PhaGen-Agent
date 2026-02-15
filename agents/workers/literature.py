@@ -4,12 +4,22 @@ import json
 from typing import Dict, List, Optional
 
 from ..models import EvidenceItem, WorkerRequest, WorkerResult
+from ..tools.registry import ToolRegistry
 from .base import Worker
 
 
 class LiteratureWorker(Worker):
-    def __init__(self, retriever, llm=None, temperature: float | None = None):
-        super().__init__("literature", retriever, llm, temperature=temperature)
+    def __init__(self, retriever, llm=None, temperature: float | None = None, tools: ToolRegistry | None = None):
+        super().__init__("literature", retriever, llm, temperature=temperature, tools=tools)
+
+    def react_role(self) -> str:
+        return "literature analyst specializing in mechanism-of-action, preclinical findings, and safety signals"
+
+    def react_query(self, request: WorkerRequest) -> str:
+        return (
+            f"Analyze peer-reviewed literature for {request.molecule}. "
+            "Identify mechanism of action, key findings, and safety notes."
+        )
 
     def build_summary(self, request: WorkerRequest, passages: List[dict]) -> WorkerResult:
         articles = self._extract_articles(passages)

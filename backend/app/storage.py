@@ -111,7 +111,7 @@ def store_raw_document(job_id: str, payload: dict) -> Optional[str]:
         return None
     
     # ZDR check handled in _put_object
-    timestamp = datetime.utcnow().replace(tzinfo=timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     key = f"jobs/{job_id}/raw/{timestamp}.json"
     body = json.dumps(payload, ensure_ascii=False, default=str).encode("utf-8")
     return _put_object(
@@ -125,7 +125,7 @@ def store_raw_document(job_id: str, payload: dict) -> Optional[str]:
 def store_report_pdf(job_id: str, report_version: int, pdf_bytes: bytes) -> Optional[str]:
     if not _is_enabled():
         return None
-    timestamp = datetime.utcnow().replace(tzinfo=timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     key = f"jobs/{job_id}/reports/v{report_version}-{timestamp}.pdf"
     return _put_object(
         bucket=_settings.s3_reports_bucket,

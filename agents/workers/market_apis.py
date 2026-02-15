@@ -8,7 +8,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -246,7 +246,7 @@ class SyntheticMarketDataProvider(MarketDataProvider):
             patient_population=data["patient_population"],
             market_share_leaders=data["market_share_leaders"],
             data_source="synthetic",
-            last_updated=datetime.utcnow().isoformat(),
+            last_updated=datetime.now(timezone.utc).isoformat(),
             confidence="low"
         )
 

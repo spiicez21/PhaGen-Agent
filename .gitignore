@@ -17,18 +17,32 @@ out/
 # OS
 .DS_Store
 Thumbs.db
+nul
+
+# Secrets & keys
+.master_key
+*.master_key
+
+# Database
+*.db
+*.sqlite3
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
 
 # Data/Indexes
 indexes/*.faiss
 indexes/*.bin
 indexes/*.chroma
-indexes/chroma
-indexes/chroma_snapshots
+indexes/chroma/
+indexes/chroma_snapshots/
+indexes/chroma_backup_*/
 indexes/.embedding_cache.json
 crawler/storage/
 crawler/**/*.dataset
 crawler/**/*.jsonl
-chroma_backup_20251208_195433
 
 # devfiles
 ignore.md

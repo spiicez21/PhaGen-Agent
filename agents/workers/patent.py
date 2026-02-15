@@ -6,12 +6,22 @@ from html import unescape
 from typing import Dict, List, Optional
 
 from ..models import WorkerRequest, WorkerResult
+from ..tools.registry import ToolRegistry
 from .base import Worker
 
 
 class PatentWorker(Worker):
-    def __init__(self, retriever, llm=None, temperature: float | None = None):
-        super().__init__("patent", retriever, llm, temperature=temperature)
+    def __init__(self, retriever, llm=None, temperature: float | None = None, tools: ToolRegistry | None = None):
+        super().__init__("patent", retriever, llm, temperature=temperature, tools=tools)
+
+    def react_role(self) -> str:
+        return "patent and regulatory analyst specializing in freedom-to-operate risk and IP landscape"
+
+    def react_query(self, request: WorkerRequest) -> str:
+        return (
+            f"Assess patent risk and regulatory guardrails for {request.molecule}. "
+            "Find assignees, priority dates, blocking claims, and contraindications."
+        )
 
     def run(self, request: WorkerRequest) -> WorkerResult:
         primary = self.retriever.search(

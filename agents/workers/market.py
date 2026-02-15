@@ -4,12 +4,22 @@ import json
 from typing import Dict, List, Optional
 
 from ..models import WorkerRequest, WorkerResult
+from ..tools.registry import ToolRegistry
 from .base import Worker
 
 
 class MarketWorker(Worker):
-    def __init__(self, retriever, llm=None, temperature: float | None = None):
-        super().__init__("market", retriever, llm, temperature=temperature)
+    def __init__(self, retriever, llm=None, temperature: float | None = None, tools: ToolRegistry | None = None):
+        super().__init__("market", retriever, llm, temperature=temperature, tools=tools)
+
+    def react_role(self) -> str:
+        return "market analyst specializing in TAM, competitive landscape, and pricing dynamics"
+
+    def react_query(self, request: WorkerRequest) -> str:
+        return (
+            f"Analyze market opportunity for {request.molecule}. "
+            "Quantify TAM, growth signals, competition intensity, and pricing."
+        )
 
     def build_summary(self, request: WorkerRequest, passages: List[dict]) -> WorkerResult:
         market_data = self._extract_market(passages)

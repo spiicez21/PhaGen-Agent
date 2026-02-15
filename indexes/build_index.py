@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import logging
 import re
 import shutil
 import subprocess
@@ -24,6 +25,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+
+logger = logging.getLogger("indexes.build_index")
 
 try:
     import chromadb
@@ -451,8 +454,9 @@ def build_index(
     )
     reused = cache.reused if cache else 0
     created = cache.created if cache else len(documents)
-    print(
-        f"Indexed {len(documents)} documents into {persist_dir} (embeddings reused: {reused}, newly encoded: {created})"
+    logger.info(
+        "Indexed %d documents into %s (embeddings reused: %d, newly encoded: %d)",
+        len(documents), persist_dir, reused, created,
     )
     return len(documents), reused, created
 
@@ -548,13 +552,13 @@ def maybe_render_structures(args: argparse.Namespace) -> dict | None:
 
     records_path = (args.structure_records or STRUCTURE_INPUT).resolve()
     if not records_path.exists():
-        print(f"Structure records file {records_path} not found; skipping structure catalog refresh.")
+        logger.info("Structure records file %s not found; skipping structure catalog refresh.", records_path)
         return None
 
     try:
         from structure_renderer import StructureRenderConfig, render_structure_catalog
     except Exception as exc:  # noqa: BLE001
-        print(f"Skipping structure rendering because structure_renderer could not load: {exc}")
+        logger.warning("Skipping structure rendering because structure_renderer could not load: %s", exc)
         return None
 
     config = StructureRenderConfig(
@@ -568,16 +572,21 @@ def maybe_render_structures(args: argparse.Namespace) -> dict | None:
     try:
         summary = render_structure_catalog(config)
     except Exception as exc:  # noqa: BLE001
-        print(f"Structure rendering failed: {exc}")
+        logger.error("Structure rendering failed: %s", exc)
         return None
 
-    print(
-        f"Rendered {summary['rendered']} structure(s) into {config.output_dir} (manifest {summary['manifest']})."
+    logger.info(
+        "Rendered %d structure(s) into %s (manifest %s)",
+        summary["rendered"], config.output_dir, summary["manifest"],
     )
     return summary
 
 
 def main() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(name)s %(levelname)s %(message)s",
+    )
     args = parse_args()
     dataset_dir = args.dataset.resolve()
     embedding_fn = SentenceTransformerEmbeddingFunction(model_name=EMBED_MODEL_NAME)
@@ -620,12 +629,12 @@ def main() -> None:
     if structure_summary:
         manifest["structures"] = structure_summary
     write_manifest(snapshot_dir, manifest)
-    print(f"Snapshot '{resolved_name}' saved under {snapshot_dir}")
+    logger.info("Snapshot '%s' saved under %s", resolved_name, snapshot_dir)
 
     if not args.no_retention:
         removed = cleanup_snapshots(args.keep_daily, args.keep_monthly)
         if removed:
-            print("Removed expired snapshots:", ", ".join(sorted(removed)))
+            logger.info("Removed expired snapshots: %s", ", ".join(sorted(removed)))
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import os
 import sys
-import logging
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -13,24 +13,18 @@ if str(ROOT) not in sys.path:
 # Load .env from repo root, overriding system environment variables
 load_dotenv(ROOT / ".env", override=True)
 
-# Configure logging for agents
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler(sys.stdout)]
-)
+# Configure structured logging for the entire application
+from agents.logging_config import configure_logging, get_logger
 
-# Set agent loggers to INFO level
-logging.getLogger('agents.master').setLevel(logging.INFO)
-logging.getLogger('agents.llm').setLevel(logging.INFO)
-logging.getLogger('agents.workers').setLevel(logging.INFO)
-logging.getLogger('agents.retrieval').setLevel(logging.INFO)
+configure_logging()
+logger = get_logger(__name__)
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
 from .database import init_db
+from .error_handlers import register_error_handlers
 from .routers import jobs as jobs_router
 from .routers import health as health_router
 from .routers import feedback as feedback_router
@@ -40,24 +34,27 @@ from .cache import get_cache
 settings = get_settings()
 app = FastAPI(title="PhaGen Agentic API")
 init_db()
+register_error_handlers(app)
 
 # Initialize cache on startup
 @app.on_event("startup")
 async def startup_event():
     cache = get_cache()
     if cache.enabled:
-        print(f"✓ Redis cache enabled: {settings.redis_url}")
+        logger.info("redis_cache_enabled", url=settings.redis_url)
     else:
-        print("✓ Cache disabled, running in direct mode")
+        logger.info("cache_disabled_direct_mode")
 
-allowed_origins = {
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-}
+_DEFAULT_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000"
+allowed_origins = [
+    o.strip()
+    for o in os.getenv("CORS_ORIGINS", _DEFAULT_ORIGINS).split(",")
+    if o.strip()
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=list(allowed_origins),
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

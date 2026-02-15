@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Callable, Dict, Iterable, Optional
 from uuid import uuid4
 
@@ -19,7 +19,7 @@ class InMemoryJobStore:
         self._version_index: Dict[str, int] = {}
 
     def create_job(self, payload: JobCreateRequest) -> JobResponse:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         job = JobResponse(
             job_id=str(uuid4()),
             status=JobStatus.pending,
@@ -36,7 +36,7 @@ class InMemoryJobStore:
         job = self._jobs[job_id]
         for key, value in kwargs.items():
             setattr(job, key, value)
-        job.updated_at = datetime.utcnow()
+        job.updated_at = datetime.now(timezone.utc)
         self._jobs[job_id] = job
         return job
 
@@ -46,7 +46,7 @@ class InMemoryJobStore:
         self._version_index[key] = next_version
         job = self._jobs[job_id]
         job.report_version = next_version
-        job.updated_at = datetime.utcnow()
+        job.updated_at = datetime.now(timezone.utc)
         self._jobs[job_id] = job
         return next_version
 
@@ -54,7 +54,7 @@ class InMemoryJobStore:
         return self._jobs[job_id]
 
     def sweep(self) -> None:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         expired = [
             job_id
             for job_id, job in self._jobs.items()
@@ -73,7 +73,7 @@ class InMemoryJobStore:
             storage_meta["raw_document_uri"] = raw_uri
         job.payload = payload
         job.report_version = report_version or job.report_version
-        job.updated_at = datetime.utcnow()
+        job.updated_at = datetime.now(timezone.utc)
         self._jobs[job_id] = job
 
     def record_report_artifact(self, job_id: str, report_version: int, artifact_path: str) -> None:
@@ -84,7 +84,7 @@ class InMemoryJobStore:
         storage_meta = payload.setdefault("storage", {})
         storage_meta["report_pdf_uri"] = artifact_path
         job.payload = payload
-        job.updated_at = datetime.utcnow()
+        job.updated_at = datetime.now(timezone.utc)
         self._jobs[job_id] = job
 
 
@@ -99,7 +99,7 @@ class PostgresJobStore:
     def create_job(self, payload: JobCreateRequest) -> JobResponse:
         with self._session() as session:
             molecule = self._get_or_create_molecule(session, payload)
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             job = JobModel(
                 id=str(uuid4()),
                 molecule_id=molecule.id,
@@ -122,7 +122,7 @@ class PostgresJobStore:
                     setattr(job, key, value.value)
                     continue
                 setattr(job, key, value)
-            job.updated_at = datetime.utcnow()
+            job.updated_at = datetime.now(timezone.utc)
             session.add(job)
             session.commit()
             session.refresh(job)
@@ -137,7 +137,7 @@ class PostgresJobStore:
                 )
             )
             job.report_version = (max_version or 0) + 1
-            job.updated_at = datetime.utcnow()
+            job.updated_at = datetime.now(timezone.utc)
             session.commit()
             return job.report_version
 
@@ -147,7 +147,7 @@ class PostgresJobStore:
             return self._to_response(job)
 
     def sweep(self) -> None:
-        threshold = datetime.utcnow() - self._ttl
+        threshold = datetime.now(timezone.utc) - self._ttl
         with self._session() as session:
             session.execute(
                 delete(JobModel).where(

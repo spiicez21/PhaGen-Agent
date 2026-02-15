@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class Recommendation(str, Enum):
@@ -34,9 +34,26 @@ class JobStatus(str, Enum):
 
 
 class JobCreateRequest(BaseModel):
-    molecule: str
+    molecule: str = Field(..., min_length=1, max_length=200)
     synonyms: Optional[List[str]] = None
-    smiles: Optional[str] = None
+    smiles: Optional[str] = Field(default=None, max_length=500)
+
+    @field_validator("molecule")
+    @classmethod
+    def _clean_molecule(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Molecule name cannot be empty")
+        return v
+
+    @field_validator("synonyms")
+    @classmethod
+    def _clean_synonyms(cls, v: list[str] | None) -> list[str] | None:
+        if v is None:
+            return None
+        if len(v) > 50:
+            raise ValueError("Too many synonyms (max 50)")
+        return [s.strip() for s in v if s.strip()]
 
 
 class JobResponse(BaseModel):

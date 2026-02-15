@@ -274,7 +274,7 @@ def _persist_structure_svg(
     meta_dir = metadata_dir or STRUCTURE_METADATA_DIR
     meta_dir.mkdir(parents=True, exist_ok=True)
     metadata_path = meta_dir / f"{safe_stem}.json"
-    generated_at = datetime.utcnow().replace(tzinfo=timezone.utc).isoformat()
+    generated_at = datetime.now(timezone.utc).isoformat()
     metadata: Dict[str, str] = {
         "image_id": safe_stem,
         "asset_path": str(asset_path),

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-import logging
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response
+
+from agents.exceptions import LLMError, PhaGenError, RetrievalError, WorkerError
+from agents.logging_config import get_logger
 
 from ..chemistry import build_structure_payload
 from ..config import get_settings
@@ -12,29 +14,37 @@ from ..storage import store_report_pdf
 from ..schemas import JobCreateRequest, JobResponse, JobStatus
 from ..security.pii_redactor import get_dlp_policy
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 try:
     from ..ml import generate_repurposing_suggestions
 except (ImportError, OSError):
-    # ML features optional - may fail on Windows without proper PyTorch/CUDA setup
     generate_repurposing_suggestions = None
 
-try:
-    from agents.master import MasterAgent
-except ModuleNotFoundError as exc:  # pragma: no cover
-    raise RuntimeError(
-        "Agents package not found. Ensure repository root is on PYTHONPATH."
-    ) from exc
+from agents.master import MasterAgent
 
 settings = get_settings()
 router = APIRouter(prefix=f"{settings.api_prefix}/jobs", tags=["jobs"])
 
-try:
-    job_store = PostgresJobStore(SessionLocal, ttl_minutes=settings.job_ttl_minutes)
-except Exception:  # pragma: no cover - fallback when DB misconfigured
-    job_store = InMemoryJobStore(ttl_minutes=settings.job_ttl_minutes)
-master_agent = MasterAgent(top_k=settings.rag_top_k)
+
+# -- Dependency injection ----------------------------------------------------
+
+def _get_job_store():
+    """Provide the job store, falling back to in-memory when DB is unavailable."""
+    try:
+        return PostgresJobStore(SessionLocal, ttl_minutes=settings.job_ttl_minutes)
+    except Exception:
+        logger.warning("postgres_unavailable_falling_back_to_memory")
+        return InMemoryJobStore(ttl_minutes=settings.job_ttl_minutes)
+
+
+def _get_master_agent():
+    return MasterAgent(top_k=settings.rag_top_k)
+
+
+# Module-level defaults (used by background tasks which can't use Depends)
+_job_store = _get_job_store()
+_master_agent = _get_master_agent()
 
 
 def _ensure_structure_metadata(job_id: str, payload: dict) -> None:
@@ -56,61 +66,71 @@ def _ensure_structure_metadata(job_id: str, payload: dict) -> None:
 
 def _run_job(job_id: str, payload: JobCreateRequest) -> None:
     try:
-        logger.info(f"\n{'='*80}")
-        logger.info(f"Starting job {job_id} for molecule: {payload.molecule}")
-        logger.info(f"{'='*80}\n")
-        
-        job_store.update_job(job_id, status=JobStatus.running)
-        result = master_agent.run(
+        logger.info("job_started", job_id=job_id, molecule=payload.molecule)
+
+        _job_store.update_job(job_id, status=JobStatus.running)
+        result = _master_agent.run(
             molecule=payload.molecule,
             synonyms=payload.synonyms,
             smiles=payload.smiles,
         )
         if not result.success:
-            logger.error(f"Job {job_id} failed with {len(result.failures)} worker failures")
-            job_store.update_job(
+            logger.error("job_worker_failures", job_id=job_id, count=len(result.failures))
+            _job_store.update_job(
                 job_id,
                 status=JobStatus.failed,
-                payload={"failures": [failure.__dict__ for failure in result.failures]},
+                payload={"failures": [failure.model_dump() for failure in result.failures]},
             )
             return
-        serialized = master_agent.serialize(result.output)
+        serialized = _master_agent.serialize(result.output)
         serialized.setdefault("molecule", payload.molecule)
         if payload.smiles:
             serialized.setdefault("smiles", payload.smiles)
-        version = job_store.assign_report_version(job_id, serialized.get("molecule"))
+        version = _job_store.assign_report_version(job_id, serialized.get("molecule"))
         serialized["report_version"] = version
         _ensure_structure_metadata(job_id, serialized)
-        
-        # Generate repurposing suggestions (if ML features available)
+
         if generate_repurposing_suggestions:
             try:
                 suggestions = generate_repurposing_suggestions(job_id, serialized)
                 if suggestions:
                     serialized["repurposing_suggestions"] = suggestions
-            except Exception as exc:  # Don't fail job if suggestions fail
-                pass  # Log in production
-        job_store.update_job(
+            except Exception as exc:
+                logger.warning("ml_suggestions_failed", job_id=job_id, error=str(exc))
+
+        _job_store.update_job(
             job_id,
             status=JobStatus.completed,
             payload=serialized,
             recommendation=result.output.recommendation,
             report_version=version,
         )
-        job_store.persist_artifacts(job_id, serialized, version)
-        
-        logger.info(f"\n{'='*80}")
-        logger.info(f"[SUCCESS] Job {job_id} completed successfully")
-        logger.info(f"   Recommendation: {result.output.recommendation}")
-        logger.info(f"   Report version: {version}")
-        logger.info(f"{'='*80}\n")
-        
-    except Exception as exc:  # pragma: no cover - logging stub
-        logger.error(f"\n{'='*80}")
-        logger.error(f"[ERROR] Job {job_id} failed with error: {str(exc)}")
-        logger.error(f"{'='*80}\n", exc_info=True)
-        
-        job_store.update_job(
+        _job_store.persist_artifacts(job_id, serialized, version)
+
+        logger.info(
+            "job_completed",
+            job_id=job_id,
+            recommendation=result.output.recommendation,
+            report_version=version,
+        )
+
+    except (LLMError, RetrievalError, WorkerError) as exc:
+        logger.error("job_agent_error", job_id=job_id, error_code=exc.code, error=str(exc))
+        _job_store.update_job(
+            job_id,
+            status=JobStatus.failed,
+            payload={"error": str(exc), "code": exc.code},
+        )
+    except PhaGenError as exc:
+        logger.error("job_phagen_error", job_id=job_id, error_code=exc.code, error=str(exc))
+        _job_store.update_job(
+            job_id,
+            status=JobStatus.failed,
+            payload={"error": str(exc), "code": exc.code},
+        )
+    except Exception as exc:
+        logger.error("job_unexpected_error", job_id=job_id, error=str(exc), exc_info=True)
+        _job_store.update_job(
             job_id,
             status=JobStatus.failed,
             payload={"error": str(exc)},
@@ -123,7 +143,7 @@ def create_job(
     background_tasks: BackgroundTasks,
     use_celery: bool = Query(default=False)
 ) -> JobResponse:
-    job = job_store.create_job(request)
+    job = _job_store.create_job(request)
     
     if use_celery:
         # Use Celery for distributed execution
@@ -143,16 +163,15 @@ def create_job(
 @router.get("/{job_id}", response_model=JobResponse)
 def get_job(job_id: str) -> JobResponse:
     try:
-        job = job_store.get_job(job_id)
-        
-        # DLP check - scan job payload for PII before returning
+        job = _job_store.get_job(job_id)
+
         if job.payload:
             dlp = get_dlp_policy()
             payload_str = str(job.payload)
             allowed, reason = dlp.enforce_policy(payload_str, operation=f"get_job:{job_id}")
-            
+
             if not allowed:
-                logger.warning(f"[DLP] Blocked job retrieval due to PII: {job_id}")
+                logger.warning("dlp_blocked_job_retrieval", job_id=job_id)
                 raise HTTPException(
                     status_code=403,
                     detail="Job contains sensitive data that cannot be exported"
@@ -169,7 +188,7 @@ def compare_jobs(job_ids: list[str] = Query(..., min_items=2, description="Provi
     missing: list[str] = []
     for job_id in job_ids:
         try:
-            jobs.append(job_store.get_job(job_id))
+            jobs.append(_job_store.get_job(job_id))
         except KeyError:
             missing.append(job_id)
 
@@ -183,7 +202,7 @@ def compare_jobs(job_ids: list[str] = Query(..., min_items=2, description="Provi
 @router.get("/{job_id}/report.pdf")
 def download_report(job_id: str) -> Response:
     try:
-        job = job_store.get_job(job_id)
+        job = _job_store.get_job(job_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Job not found") from exc
 
@@ -192,12 +211,12 @@ def download_report(job_id: str) -> Response:
 
     try:
         pdf_bytes = generate_report_pdf(job)
-    except Exception as exc:  # pragma: no cover - rendering depends on runtime libs
+    except Exception as exc:  # pragma: no cover
         raise HTTPException(status_code=500, detail=f"Failed to render PDF: {exc}") from exc
 
     artifact_uri = store_report_pdf(job.job_id, job.report_version or 1, pdf_bytes)
     if artifact_uri:
-        job_store.record_report_artifact(job.job_id, job.report_version or 1, artifact_uri)
+        _job_store.record_report_artifact(job.job_id, job.report_version or 1, artifact_uri)
 
     return Response(
         content=pdf_bytes,
