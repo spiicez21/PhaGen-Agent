@@ -1,19 +1,25 @@
 import type { Metadata } from "next";
-import { Poppins } from "next/font/google";
+import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
-const poppins = Poppins({
+const ibmPlexSans = IBM_Plex_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-poppins",
+  variable: "--font-sans",
+});
+
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-mono",
 });
 
 export const metadata: Metadata = {
-  title: "PhaGen Agentic",
-  description: "Agentic molecule repurposing copilot UI",
+  title: "PhaGen — R&D Intelligence",
+  description: "AI-powered molecule repurposing research platform",
 };
 
 export default function RootLayout({
@@ -23,13 +29,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={cn("min-h-screen bg-background font-sans antialiased", poppins.variable)}>
+      <body className={cn(
+        "min-h-screen bg-background font-sans antialiased",
+        ibmPlexSans.variable,
+        ibmPlexMono.variable
+      )}>
         <AuthProvider>
-          <div className="relative flex min-h-screen flex-col">
-            <div className="paper-texture fixed inset-0 pointer-events-none" />
+          <div className="flex min-h-screen flex-col">
             <Header />
-            <main className="flex-1 container max-w-screen-2xl mx-auto px-6 py-8 relative">
-              {children}
+            <main className="flex-1">
+              <div className="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8 py-5">
+                {children}
+              </div>
             </main>
           </div>
         </AuthProvider>
@@ -37,4 +48,3 @@ export default function RootLayout({
     </html>
   );
 }
-

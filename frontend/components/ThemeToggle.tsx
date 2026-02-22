@@ -25,18 +25,16 @@ export function ThemeToggle() {
   };
 
   return (
-    <Button
-      variant="ghost"
-      size="icon"
+    <button
       onClick={toggleTheme}
-      className="rounded-full hover:bg-muted"
+      className="flex items-center justify-center h-6 w-6 rounded hover:bg-muted/60 transition-colors text-muted-foreground hover:text-foreground"
       aria-label="Toggle theme"
     >
       {theme === "light" ? (
-        <Moon className="h-5 w-5" />
+        <Moon className="h-3.5 w-3.5" />
       ) : (
-        <Sun className="h-5 w-5" />
+        <Sun className="h-3.5 w-3.5" />
       )}
-    </Button>
+    </button>
   );
 }
