@@ -66,7 +66,7 @@ def _ensure_structure_metadata(job_id: str, payload: dict) -> None:
 
 def _run_job(job_id: str, payload: JobCreateRequest) -> None:
     try:
-        logger.info("job_started", job_id=job_id, molecule=payload.molecule)
+        logger.info("job_started job_id=%s molecule=%s", job_id, payload.molecule)
 
         _job_store.update_job(job_id, status=JobStatus.running)
         result = _master_agent.run(
@@ -75,7 +75,7 @@ def _run_job(job_id: str, payload: JobCreateRequest) -> None:
             smiles=payload.smiles,
         )
         if not result.success:
-            logger.error("job_worker_failures", job_id=job_id, count=len(result.failures))
+            logger.error("job_worker_failures job_id=%s count=%d", job_id, len(result.failures))
             _job_store.update_job(
                 job_id,
                 status=JobStatus.failed,
@@ -96,7 +96,7 @@ def _run_job(job_id: str, payload: JobCreateRequest) -> None:
                 if suggestions:
                     serialized["repurposing_suggestions"] = suggestions
             except Exception as exc:
-                logger.warning("ml_suggestions_failed", job_id=job_id, error=str(exc))
+                logger.warning("ml_suggestions_failed job_id=%s error=%s", job_id, exc)
 
         _job_store.update_job(
             job_id,
@@ -108,28 +108,26 @@ def _run_job(job_id: str, payload: JobCreateRequest) -> None:
         _job_store.persist_artifacts(job_id, serialized, version)
 
         logger.info(
-            "job_completed",
-            job_id=job_id,
-            recommendation=result.output.recommendation,
-            report_version=version,
+            "job_completed job_id=%s recommendation=%s report_version=%s",
+            job_id, result.output.recommendation, version,
         )
 
     except (LLMError, RetrievalError, WorkerError) as exc:
-        logger.error("job_agent_error", job_id=job_id, error_code=exc.code, error=str(exc))
+        logger.error("job_agent_error job_id=%s code=%s error=%s", job_id, exc.code, exc)
         _job_store.update_job(
             job_id,
             status=JobStatus.failed,
             payload={"error": str(exc), "code": exc.code},
         )
     except PhaGenError as exc:
-        logger.error("job_phagen_error", job_id=job_id, error_code=exc.code, error=str(exc))
+        logger.error("job_phagen_error job_id=%s code=%s error=%s", job_id, exc.code, exc)
         _job_store.update_job(
             job_id,
             status=JobStatus.failed,
             payload={"error": str(exc), "code": exc.code},
         )
     except Exception as exc:
-        logger.error("job_unexpected_error", job_id=job_id, error=str(exc), exc_info=True)
+        logger.error("job_unexpected_error job_id=%s error=%s", job_id, exc, exc_info=True)
         _job_store.update_job(
             job_id,
             status=JobStatus.failed,
@@ -171,7 +169,7 @@ def get_job(job_id: str) -> JobResponse:
             allowed, reason = dlp.enforce_policy(payload_str, operation=f"get_job:{job_id}")
 
             if not allowed:
-                logger.warning("dlp_blocked_job_retrieval", job_id=job_id)
+                logger.warning("dlp_blocked_job_retrieval job_id=%s", job_id)
                 raise HTTPException(
                     status_code=403,
                     detail="Job contains sensitive data that cannot be exported"

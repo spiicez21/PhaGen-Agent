@@ -47,7 +47,7 @@ class LLMClient:
         model: Optional[str] = None,
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
-        timeout: float = 60.0,
+        timeout: float = float(os.getenv("LLM_TIMEOUT", "240")),
     ) -> None:
         self.provider = (provider or os.getenv("LLM_PROVIDER", "ollama")).lower()
         self.model = model or os.getenv("LLM_MODEL", "smollm:360m")

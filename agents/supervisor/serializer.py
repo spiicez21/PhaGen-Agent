@@ -5,7 +5,6 @@ Extracted from MasterAgent.serialize() (master.py:485-507).
 
 from __future__ import annotations
 
-from dataclasses import asdict
 from typing import Dict, List
 
 from ..api_budget import api_budget_monitor, summarize_budget_status
@@ -20,7 +19,7 @@ from .quality_checker import (
 
 def serialize_result(result: MasterResult) -> dict:
     """Convert a MasterResult into a fully validated, serializable dict."""
-    payload = asdict(result)
+    payload = result.model_dump()
     workers: Dict[str, Dict[str, object]] = payload.get("workers", {})
 
     worker_evidence_map, evidence_catalog = attach_evidence_ids(workers)

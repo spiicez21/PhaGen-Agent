@@ -47,10 +47,10 @@ class SupervisorAgent:
     """Orchestrates domain workers with quality checking and retry logic."""
 
     DEFAULT_WORKER_TIMEOUTS = {
-        "clinical": 45.0,
-        "patent": 35.0,
-        "literature": 35.0,
-        "market": 30.0,
+        "clinical": 300.0,
+        "patent": 300.0,
+        "literature": 300.0,
+        "market": 300.0,
     }
     DEFAULT_RETRY_BUDGET = {
         "clinical": 1,
